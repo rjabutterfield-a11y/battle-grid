@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BATTLE GRID</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+:root{--red:#ff2244;--blue:#0088ff;--gold:#ffcc00;--bg:#080c14;--cell-border:rgba(0,180,255,0.2);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:#eef;font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(0,136,255,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 50%,rgba(255,34,68,0.06) 0%,transparent 60%);pointer-events:none;z-index:0;}
+#app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:10px;}
+
+/* ---- SCREENS ---- */
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:90vh;gap:20px;}
+.screen.active{display:flex;}
+.bg-title{font-family:'Bebas Neue';font-size:clamp(3rem,10vw,6rem);letter-spacing:0.1em;background:linear-gradient(180deg,#fff 0%,#88ccff 50%,#0088ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(0,136,255,0.7));}
+.subtitle{font-size:1rem;color:rgba(200,220,255,0.6);letter-spacing:0.3em;text-transform:uppercase;}
+.status-line{font-family:'Share Tech Mono';font-size:0.85rem;color:rgba(200,220,255,0.5);text-align:center;min-height:1.4em;max-width:420px;}
+.error-line{font-family:'Share Tech Mono';font-size:0.8rem;color:#ff6666;text-align:center;max-width:420px;padding:8px;border:1px solid rgba(255,100,100,0.3);border-radius:6px;background:rgba(255,0,0,0.05);display:none;}
+.btn-row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}
+.role-btn{font-family:'Bebas Neue';font-size:1.4rem;letter-spacing:0.15em;padding:16px 40px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;}
+.role-btn.red{background:linear-gradient(135deg,#880022,#ff2244);color:white;box-shadow:0 0 25px rgba(255,34,68,0.4);}
+.role-btn.red:hover:not(:disabled){box-shadow:0 0 40px rgba(255,34,68,0.7);transform:translateY(-2px);}
+.role-btn.blue{background:linear-gradient(135deg,#003388,#0088ff);color:white;box-shadow:0 0 25px rgba(0,136,255,0.4);}
+.role-btn.blue:hover:not(:disabled){box-shadow:0 0 40px rgba(0,136,255,0.7);transform:translateY(-2px);}
+.role-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none!important;}
+.plain-btn{font-family:'Rajdhani';font-size:0.9rem;padding:8px 20px;border-radius:6px;border:1px solid rgba(200,220,255,0.2);background:rgba(255,255,255,0.05);color:rgba(200,220,255,0.5);cursor:pointer;transition:all 0.2s;}
+.plain-btn:hover{border-color:rgba(200,220,255,0.4);color:#eef;}
+.big-code{font-family:'Bebas Neue';font-size:4rem;letter-spacing:0.4em;color:var(--gold);text-shadow:0 0 20px rgba(255,204,0,0.5);}
+input.code-input{font-family:'Share Tech Mono';font-size:2rem;letter-spacing:0.4em;text-align:center;width:200px;padding:12px;border-radius:8px;border:2px solid rgba(0,180,255,0.4);background:rgba(0,180,255,0.05);color:#eef;outline:none;}
+input.code-input:focus{border-color:rgba(0,180,255,0.8);}
+.action-btn{font-family:'Bebas Neue';font-size:1.2rem;letter-spacing:0.15em;padding:14px 36px;border-radius:8px;border:none;cursor:pointer;background:linear-gradient(135deg,#003388,#0088ff);color:white;transition:all 0.2s;}
+.action-btn:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,136,255,0.4);}
+
+/* ---- GAME ---- */
+#game-screen{display:none;flex-direction:column;min-height:100vh;}
+#game-screen.active{display:flex;}
+header{text-align:center;padding:6px 0 2px;}
+header h1{font-family:'Bebas Neue';font-size:clamp(1.8rem,4vw,3rem);letter-spacing:0.1em;background:linear-gradient(180deg,#fff 0%,#88ccff 50%,#0088ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+#role-badge{text-align:center;font-family:'Bebas Neue';font-size:1rem;letter-spacing:0.15em;margin-bottom:4px;}
+#observer-banner{display:none;background:rgba(0,80,40,0.35);border:1px solid #00cc77;border-radius:8px;padding:8px 16px;margin:4px 8px;font-family:'Share Tech Mono';font-size:0.78rem;color:#00ff99;text-align:center;letter-spacing:0.1em;}
+#observer-banner.show{display:block;}
+#observer-qbox{display:none;background:rgba(0,40,80,0.5);border:1px solid rgba(100,180,255,0.4);border-radius:8px;padding:10px 14px;margin:6px 8px;font-family:'Share Tech Mono';font-size:0.8rem;color:rgba(200,230,255,0.9);}
+#observer-qbox.show{display:block;}
+#observer-qbox .obs-answer{color:#00ff99;font-weight:bold;margin-top:6px;}
+#scorebar{display:flex;align-items:center;gap:10px;padding:4px 0;}
+.player-panel{flex:1;background:rgba(255,255,255,0.03);border:1px solid;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;transition:box-shadow 0.3s;}
+.player-panel.red{border-color:rgba(255,34,68,0.4);}
+.player-panel.blue{border-color:rgba(0,136,255,0.4);}
+.player-panel.red.myturn{box-shadow:0 0 18px rgba(255,34,68,0.5);border-color:var(--red);}
+.player-panel.blue.myturn{box-shadow:0 0 18px rgba(0,136,255,0.5);border-color:var(--blue);}
+.player-panel.mine{outline:2px solid rgba(255,204,0,0.35);outline-offset:2px;}
+.pname{font-family:'Bebas Neue';font-size:0.9rem;}
+.pscore{font-family:'Bebas Neue';font-size:1.1rem;line-height:1;}
+.player-panel.red .pscore{color:var(--red);}
+.player-panel.blue .pscore{color:var(--blue);}
+.pmoney{font-family:'Bebas Neue';font-size:1.8rem;font-weight:900;line-height:1.1;color:#ffdd44;text-shadow:0 0 12px rgba(255,220,0,0.7);}
+.ptiles{font-family:'Share Tech Mono';font-size:0.6rem;color:rgba(200,220,255,0.4);}
+.vs{font-family:'Bebas Neue';font-size:1.2rem;color:rgba(200,220,255,0.25);}
+@keyframes money-pop{0%{transform:translateY(0) scale(1);opacity:1;}50%{transform:translateY(-50px) scale(1.5);opacity:1;}100%{transform:translateY(-90px) scale(0.8);opacity:0;}}
+@keyframes steal-flash{0%,100%{background:rgba(255,34,68,0);}35%{background:rgba(255,34,68,0.3);}70%{background:rgba(255,34,68,0.1);}}
+@keyframes set-flash{
+  0%  {opacity:1;transform:scale(1);}
+  20% {opacity:0;transform:scale(1.12);}
+  40% {opacity:1;transform:scale(1);}
+  60% {opacity:0;transform:scale(1.12);}
+  80% {opacity:1;transform:scale(1);}
+  90% {opacity:0;transform:scale(1.08);}
+  100%{opacity:0;transform:scale(0.8);}
+}
+.cell.set-vanish{animation:set-flash 1.4s ease-in-out forwards;pointer-events:none;}
+.money-pop{position:fixed;font-family:'Bebas Neue';font-size:2.4rem;pointer-events:none;z-index:9000;animation:money-pop 1.5s ease-out forwards;}
+.steal-flash-overlay{position:fixed;inset:0;pointer-events:none;z-index:8999;animation:steal-flash 0.8s ease-out forwards;}
+#cat-bar{display:flex;gap:6px;flex-wrap:wrap;padding:3px 0;align-items:center;min-height:32px;}
+.cat-pill{padding:3px 10px;border-radius:20px;border:1px solid;font-family:'Rajdhani';font-size:0.75rem;font-weight:600;display:flex;align-items:center;gap:5px;}
+.cat-next{font-family:'Share Tech Mono';font-size:0.65rem;color:rgba(200,220,255,0.3);padding:2px 6px;}
+#arena{display:grid;grid-template-columns:150px 1fr 150px;gap:8px;align-items:start;flex:1;}
+.side-panel{display:flex;flex-direction:column;gap:6px;}
+.pbox{background:rgba(255,255,255,0.02);border:1px solid rgba(200,220,255,0.07);border-radius:8px;padding:7px;}
+.pbox h3{font-family:'Bebas Neue';font-size:0.8rem;letter-spacing:0.1em;color:rgba(200,220,255,0.35);margin-bottom:5px;}
+.hand-tiles{display:flex;flex-direction:column;gap:3px;}
+.htile{padding:3px 7px;border-radius:5px;border:1px solid rgba(200,220,255,0.12);background:rgba(255,255,255,0.03);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:5px;font-size:0.75rem;}
+.htile:hover{border-color:rgba(200,220,255,0.3);}
+.htile.sel{border-color:var(--gold);background:rgba(255,204,0,0.08);}
+.catprog{display:flex;flex-direction:column;gap:4px;}
+.cprow{font-size:0.65rem;color:rgba(200,220,255,0.45);}
+.cpbg{height:3px;background:rgba(255,255,255,0.07);border-radius:2px;margin-top:2px;}
+.cpbar{height:3px;border-radius:2px;transition:width 0.3s;}
+#grid-wrap{display:flex;justify-content:center;margin-bottom:6px;}
+#grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;width:100%;max-width:360px;}
+.cell{aspect-ratio:1;border:1px solid var(--cell-border);border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.02);position:relative;overflow:hidden;}
+.cell:hover{border-color:rgba(0,180,255,0.35);}
+.temoji{font-size:1.3rem;line-height:1;}
+.tlabel{font-size:0.45rem;font-family:'Share Tech Mono';text-align:center;margin-top:1px;opacity:0.85;padding:0 2px;}
+.licon{position:absolute;top:2px;right:2px;font-size:0.55rem;opacity:0.6;}
+.cell.red{background:rgba(255,34,68,0.13);border-color:rgba(255,34,68,0.35);}
+.cell.blue{background:rgba(0,136,255,0.13);border-color:rgba(0,136,255,0.35);}
+.cell.locked.red{background:rgba(255,34,68,0.22);border-color:var(--red);}
+.cell.locked.blue{background:rgba(0,136,255,0.22);border-color:var(--blue);}
+.cell.place-target{border-color:rgba(0,255,136,0.6);background:rgba(0,255,136,0.07);cursor:crosshair;}
+.cell.place-target:hover{border-color:rgba(0,255,136,1);background:rgba(0,255,136,0.13);}
+.cell.steal-click{cursor:crosshair;}
+.cell.steal-click:hover{border-color:rgba(255,204,0,0.4);background:rgba(255,204,0,0.05);}
+#qarea{background:rgba(255,255,255,0.02);border:1px solid rgba(200,220,255,0.07);border-radius:8px;padding:10px;}
+#turn-ind{font-family:'Bebas Neue';font-size:1rem;letter-spacing:0.15em;text-align:center;margin-bottom:6px;padding:3px;border-radius:4px;}
+#turn-ind.red{color:var(--red);}
+#turn-ind.blue{color:var(--blue);}
+#turn-ind.neutral{color:rgba(200,220,255,0.4);}
+#qtext{font-size:0.9rem;font-weight:600;color:rgba(220,235,255,0.9);line-height:1.4;min-height:2.4em;margin-bottom:8px;text-align:center;}
+#answers{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;}
+.abtn{padding:7px 9px;border-radius:5px;border:1px solid rgba(200,220,255,0.18);background:rgba(255,255,255,0.03);color:#eef;font-family:'Rajdhani';font-size:0.82rem;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;}
+.abtn:hover:not(:disabled){border-color:rgba(0,180,255,0.5);background:rgba(0,180,255,0.08);}
+.abtn:disabled{cursor:default;opacity:0.7;}
+.abtn.correct{background:rgba(0,255,136,0.13);border-color:#00ff88;color:#00ff88;}
+.abtn.wrong{background:rgba(255,34,68,0.13);border-color:#ff2244;color:#ff8899;}
+.aopt{font-family:'Share Tech Mono';font-size:0.7rem;color:rgba(200,220,255,0.35);margin-right:3px;}
+#controls{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+.cbtn{font-family:'Bebas Neue';letter-spacing:0.1em;font-size:0.95rem;padding:7px 16px;border-radius:6px;border:1px solid rgba(200,220,255,0.18);background:rgba(255,255,255,0.04);color:#eef;cursor:pointer;transition:all 0.2s;}
+.cbtn:hover:not(:disabled){border-color:rgba(0,180,255,0.4);background:rgba(0,180,255,0.08);}
+.cbtn:disabled{opacity:0.3;cursor:not-allowed;}
+#new-cat{display:none;margin-top:6px;padding:5px 10px;border-radius:5px;font-family:'Bebas Neue';font-size:0.85rem;letter-spacing:0.1em;text-align:center;}
+#statusbar{font-family:'Share Tech Mono';font-size:0.68rem;color:rgba(200,220,255,0.45);text-align:center;padding:4px 0;min-height:1.5em;}
+#steal-bar{display:none;text-align:center;padding:4px 8px;margin-top:3px;background:linear-gradient(90deg,transparent,rgba(255,204,0,0.1),transparent);border:1px solid rgba(255,204,0,0.35);border-radius:5px;font-family:'Bebas Neue';font-size:0.8rem;letter-spacing:0.12em;color:var(--gold);}
+#steal-bar.show{display:block;}
+#trap-bar{display:none;text-align:center;padding:4px 8px;margin-top:3px;background:linear-gradient(90deg,transparent,rgba(255,80,0,0.12),transparent);border:1px solid rgba(255,100,0,0.45);border-radius:5px;font-family:'Bebas Neue';font-size:0.8rem;letter-spacing:0.12em;color:#ff7040;}
+#trap-bar.show{display:block;}
+.cell.my-trap{outline:2px dashed rgba(255,100,0,0.7);outline-offset:-3px;}
+.cell.my-trap::after{content:'💣';position:absolute;bottom:2px;right:3px;font-size:0.7rem;opacity:0.8;}
+.cbtn#btn-trap{background:rgba(255,80,0,0.12);border-color:rgba(255,120,0,0.45);color:#ff9060;}
+.cbtn#btn-trap:hover:not(:disabled){background:rgba(255,80,0,0.22);border-color:rgba(255,140,0,0.7);}
+.cbtn#btn-trap:disabled{opacity:0.25;}
+@keyframes trap-trigger{
+  0%{background:rgba(255,80,0,0.0);}
+  20%{background:rgba(255,80,0,0.5);}
+  50%{background:rgba(255,80,0,0.15);}
+  70%{background:rgba(255,80,0,0.45);}
+  100%{background:rgba(255,80,0,0.0);}
+}
+.cell.trap-triggered{animation:trap-trigger 0.7s ease-out forwards;}
+
+/* WAITING */
+#waiting{display:none;position:fixed;inset:0;background:rgba(8,12,20,0.94);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+#waiting.show{display:flex;}
+/* CAT PICKER */
+#cat-picker{display:none;position:fixed;inset:0;background:rgba(8,12,20,0.96);z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;}
+#cat-picker.show{display:flex;}
+#cat-picker h2{font-family:'Bebas Neue';font-size:2rem;letter-spacing:0.12em;color:#eef;margin:0;}
+#cat-picker p{font-family:'Share Tech Mono';font-size:0.75rem;color:rgba(200,220,255,0.5);margin:0;text-align:center;}
+.cat-pick-btn{font-family:'Bebas Neue';font-size:1.2rem;letter-spacing:0.1em;padding:14px 28px;border-radius:8px;border:1px solid;cursor:pointer;min-width:220px;text-align:center;transition:all 0.2s;}
+.cat-pick-btn:hover{filter:brightness(1.3);transform:scale(1.04);}
+#waiting p{font-family:'Bebas Neue';font-size:1.6rem;letter-spacing:0.15em;color:rgba(200,220,255,0.7);}
+#waiting .wcode{font-family:'Bebas Neue';font-size:3.5rem;letter-spacing:0.4em;color:var(--gold);text-shadow:0 0 20px rgba(255,204,0,0.5);}
+#waiting small{font-family:'Share Tech Mono';font-size:0.7rem;color:rgba(200,220,255,0.3);}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner{width:36px;height:36px;border:3px solid rgba(0,180,255,0.12);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;}
+
+/* END */
+#end{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:500;align-items:center;justify-content:center;}
+#end.show{display:flex;}
+.endbox{background:linear-gradient(135deg,#0a1428,#060d1c);border:1px solid rgba(0,180,255,0.3);border-radius:14px;padding:36px 48px;text-align:center;max-width:480px;}
+#end-title{font-family:'Bebas Neue';font-size:2.8rem;letter-spacing:0.1em;color:#fff;filter:drop-shadow(0 0 18px rgba(0,136,255,0.8));}
+#end-msg{font-size:0.95rem;color:rgba(200,220,255,0.65);margin:8px 0 16px;}
+#end-scores{font-family:'Share Tech Mono';font-size:0.95rem;color:rgba(200,220,255,0.55);margin-bottom:20px;}
+.endbtn{font-family:'Bebas Neue';letter-spacing:0.15em;font-size:1.2rem;padding:10px 32px;border-radius:7px;border:none;cursor:pointer;background:linear-gradient(135deg,#0066cc,#0099ff);color:white;}
+@keyframes steal-pulse{from{transform:scale(1);}to{transform:scale(1.06);}}
+
+
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<audio id="lobby-music" src="OXYGENE.mp3" loop preload="auto"></audio>
+<div id="app">
+
+<!-- SCREEN 1: HOME -->
+<div id="s-home" class="screen active">
+  <div class="bg-title">BATTLE GRID</div>
+  <div class="subtitle">What you know is only half the battle</div>
+  <div id="home-error" class="error-line"></div>
+  <div id="home-status" class="status-line">Loading...</div>
+  <div class="btn-row">
+    <button class="action-btn" onclick="goCreate()">➕ Create Game</button>
+    <button class="action-btn" style="background:linear-gradient(135deg,#220033,#660099);" onclick="goJoin()">🔑 Join Game</button>
+    <button class="action-btn" style="background:linear-gradient(135deg,#003322,#006644);margin-top:6px;" onclick="goObserve()">👁 Watch Game</button>
+  </div>
+</div>
+
+<!-- SCREEN 2: CREATE (shows generated code, waits) -->
+<div id="s-create" class="screen">
+  <div class="bg-title">BATTLE GRID</div>
+  <div class="status-line">Share this code with your opponent</div>
+  <div id="create-code" class="big-code"></div>
+  <div id="create-status" class="status-line">Waiting for opponent to join...</div>
+  <div class="btn-row">
+    <button class="role-btn red" id="create-red" onclick="pickRole('red')">🔴 Play as P1</button>
+    <button class="role-btn blue" id="create-blue" onclick="pickRole('blue')">🔵 Play as P2</button>
+  </div>
+  <button class="plain-btn" onclick="goHome()">← Back</button>
+</div>
+
+<!-- SCREEN 3: JOIN (enter code) -->
+<div id="s-join" class="screen">
+  <div class="bg-title">BATTLE GRID</div>
+  <div class="status-line">Enter the 4-digit room code</div>
+  <input id="join-input" class="code-input" type="text" maxlength="4" placeholder="0000"
+    oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"
+    onkeydown="if(event.key==='Enter')doJoin()">
+  <div id="join-error" class="error-line"></div>
+  <button class="action-btn" onclick="doJoin()">Join Room</button>
+  <button class="plain-btn" onclick="goHome()">← Back</button>
+</div>
+
+<!-- SCREEN 3b: OBSERVE (enter code to watch) -->
+<div id="s-observe" class="screen">
+  <div class="bg-title">BATTLE GRID</div>
+  <div class="status-line">Enter the 4-digit room code to watch</div>
+  <input id="observe-input" class="code-input" type="text" maxlength="4" placeholder="0000"
+    oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,4)"
+    onkeydown="if(event.key==='Enter')doObserve()">
+  <div id="observe-error" class="error-line"></div>
+  <button class="action-btn" style="background:linear-gradient(135deg,#003322,#006644);" onclick="doObserve()">👁 Watch Room</button>
+  <button class="plain-btn" onclick="goHome()">← Back</button>
+</div>
+
+<!-- SCREEN 4: PICK ROLE (after joining) -->
+<div id="s-role" class="screen">
+  <div class="bg-title">BATTLE GRID</div>
+  <div style="font-family:'Share Tech Mono';font-size:0.85rem;color:rgba(200,220,255,0.4);letter-spacing:0.2em;" id="role-room-code"></div>
+  <div id="role-status" class="status-line">Choose your side</div>
+  <div class="btn-row">
+    <button class="role-btn red" id="role-red" onclick="pickRole('red')">🔴 Play as P1</button>
+    <button class="role-btn blue" id="role-blue" onclick="pickRole('blue')">🔵 Play as P2</button>
+  </div>
+  <button class="plain-btn" onclick="goHome()">← Back</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <header><h1>BATTLE GRID</h1></header>
+  <div id="role-badge"></div>
+  <div id="observer-banner">👁 OBSERVER MODE — You can see everything. No controls active.</div>
+  <div id="observer-qbox">
+    <div id="observer-qtitle" style="opacity:0.5;font-size:0.7rem;margin-bottom:4px;">CURRENT QUESTION</div>
+    <div id="observer-qtext"></div>
+    <div class="obs-answer" id="observer-answer"></div>
+  </div>
+  <div id="scorebar">
+    <div class="player-panel red" id="panel-red">
+      <div><div class="pname">🔴 P1</div><div class="ptiles" id="red-tiles">0 tiles</div></div>
+      <div style="text-align:right">
+        <div class="pmoney" id="red-money">£0</div>
+        <div class="pscore" id="red-score" style="font-size:1rem">0 <span style="font-size:0.5rem;opacity:0.5">SETS</span></div>
+      </div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="player-panel blue" id="panel-blue">
+      <div style="text-align:left">
+        <div class="pmoney" id="blue-money">£0</div>
+        <div class="pscore" id="blue-score" style="font-size:1rem">0 <span style="font-size:0.5rem;opacity:0.5">SETS</span></div>
+      </div>
+      <div><div class="pname">P2 🔵</div><div class="ptiles" id="blue-tiles">0 tiles</div></div>
+    </div>
+  </div>
+  <div id="cat-bar"></div>
+  <div id="arena">
+    <div class="side-panel">
+      <div class="pbox"><h3>🔴 P1 Hand</h3><div class="hand-tiles" id="red-hand"></div></div>
+      <div class="pbox"><h3>🔴 P1 Sets</h3><div class="catprog" id="red-cats"></div></div>
+    </div>
+    <div>
+      <div id="grid-wrap"><div id="grid"></div></div>
+      <div id="qarea">
+        <div id="turn-ind" class="neutral">—</div>
+        <div id="qtext">—</div>
+        <div id="answers"></div>
+        <div id="controls">
+          <button class="cbtn" id="btn-trap"  onclick="activateTrap()">💣 TRAP</button>
+          <button class="cbtn" id="btn-steal" onclick="activateSteal()">⚡ STEAL</button>
+          <button class="cbtn" id="btn-next"  onclick="nextQuestion()">▶ NEXT Q</button>
+          <button class="cbtn" id="btn-place" onclick="enterPlaceMode()">📍 PLACE</button>
+          <button class="cbtn" id="btn-skip"  onclick="skipTurn()">SKIP</button>
+        </div>
+        <div id="new-cat"></div>
+      </div>
+      <div id="statusbar"></div>
+      <div id="steal-bar">⚡ STEAL MODE — click where you think the tile is hidden!</div>
+      <div id="trap-bar">💣 TRAP MODE — click an empty cell to place your trap!</div>
+    </div>
+    <div class="side-panel">
+      <div class="pbox"><h3>P2 Hand 🔵</h3><div class="hand-tiles" id="blue-hand"></div></div>
+      <div class="pbox"><h3>P2 Sets 🔵</h3><div class="catprog" id="blue-cats"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING OVERLAY -->
+<div id="waiting">
+  <div class="spinner"></div>
+  <p>WAITING FOR OPPONENT</p>
+  <div class="wcode" id="wait-code"></div>
+  <small>Share this code with your opponent</small>
+  <button class="plain-btn" onclick="goHome()" style="margin-top:8px;">Leave</button>
+</div>
+
+<!-- END OVERLAY -->
+<div id="end">
+  <div class="endbox">
+    <div id="end-title">GAME OVER</div>
+    <div id="end-msg"></div>
+    <div id="end-scores"></div>
+    <button class="endbtn" onclick="goHome()">PLAY AGAIN</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<!-- CATEGORY PICKER OVERLAY — outside #app so position:fixed works correctly -->
+<div id="cat-picker">
+  <h2 id="cat-picker-title">Choose a Category</h2>
+  <p id="cat-picker-sub">Select which category to release into play</p>
+  <div id="cat-picker-btns"></div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG — replace YOUR_* values with your Firebase config
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCnhYjbHSjRw5hwWDrF6tQqH6OMVWcKfv8",
+  authDomain:        "battle-grid-7fa4f.firebaseapp.com",
+  databaseURL:       "https://battle-grid-7fa4f-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "battle-grid-7fa4f",
+  storageBucket:     "battle-grid-7fa4f.firebasestorage.app",
+  messagingSenderId: "775436519324",
+  appId:             "1:775436519324:web:34a3f1aa6b29882c9baa59",
+  measurementId:     "G-8Q88LCZ2W1"
+};
+// ============================================================
+
+// ============================================================
+// GAME DATA
+// ============================================================
+const ALL_CATS = {
+  celebrities:{label:'Famous Toms',color:'rgba(255,60,180,0.3)',border:'#ff3cb4',
+    tiles:[{id:'cel1',e:'🎬',l:'Tom Hanks'},{id:'cel2',e:'✈️',l:'Tom Cruise'},{id:'cel3',e:'🐍',l:'Tom Hiddleston'},{id:'cel4',e:'💪',l:'Tom Hardy'}]},
+  biscuits:{label:'Biscuits',color:'rgba(210,140,50,0.3)',border:'#d28c32',
+    tiles:[{id:'bis1',e:'🍪',l:'Digestive'},{id:'bis2',e:'🌟',l:'Bourbon'},{id:'bis3',e:'🎉',l:'Custard Cream'},{id:'bis4',e:'🐸',l:'Jammy Dodger'}]},
+  farmyard:{label:'Farmyard Animals',color:'rgba(120,200,60,0.3)',border:'#78c83c',
+    tiles:[{id:'frm1',e:'🐷',l:'Pig'},{id:'frm2',e:'🐄',l:'Cow'},{id:'frm3',e:'🐑',l:'Sheep'},{id:'frm4',e:'🐓',l:'Chicken'}]},
+  nursery:{label:'Nursery Rhymes',color:'rgba(130,80,255,0.3)',border:'#8250ff',
+    tiles:[{id:'nur1',e:'🕸️',l:'Little Miss Muffet'},{id:'nur2',e:'🥚',l:'Humpty Dumpty'},{id:'nur3',e:'🌟',l:'Jack and Jill'},{id:'nur4',e:'🐑',l:'Little Bo Peep'}]},
+  weekend:{label:'Long Weekend',color:'rgba(255,200,0,0.3)',border:'#ffc800',
+    tiles:[{id:'wk1',e:'🎉',l:'Friday'},{id:'wk2',e:'☀️',l:'Saturday'},{id:'wk3',e:'😴',l:'Sunday'},{id:'wk4',e:'😩',l:'Monday'}]},
+  tens:{label:'Tens',color:'rgba(0,220,180,0.3)',border:'#00dcb4',
+    tiles:[{id:'ten1',e:'🔟',l:'10'},{id:'ten2',e:'2️⃣',l:'20'},{id:'ten3',e:'3️⃣',l:'30'},{id:'ten4',e:'4️⃣',l:'40'}]},
+  directions:{label:'Directions',color:'rgba(80,160,255,0.3)',border:'#50a0ff',
+    tiles:[{id:'dir1',e:'⬆️',l:'Up'},{id:'dir2',e:'⬇️',l:'Down'},{id:'dir3',e:'⬅️',l:'Left'},{id:'dir4',e:'➡️',l:'Right'}]},
+};
+const CAT_KEYS=['celebrities','biscuits','farmyard','nursery','weekend','tens','directions'];
+const CAT_OPTS={
+  celebrities:['Tom Hanks','Tom Cruise','Tom Hiddleston','Tom Hardy'],
+  biscuits:['Digestive','Bourbon','Custard Cream','Jammy Dodger'],
+  farmyard:['Pig','Cow','Sheep','Chicken'],
+  nursery:['Little Miss Muffet','Humpty Dumpty','Jack and Jill','Little Bo Peep'],
+  weekend:['Friday','Saturday','Sunday','Monday'],
+  tens:['10','20','30','40'],
+  directions:['Up','Down','Left','Right'],
+};
+const QUESTIONS=[
+  // ── FAMOUS TOMS ──
+  {q:"Which Tom won back-to-back Best Actor Oscars in 1994 and 1995?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom voiced Woody in Toy Story?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"A volleyball called Wilson co-starred with which Tom in Cast Away?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom played a lawyer defending an AIDS patient in Philadelphia?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom played both conductor and passengers in The Polar Express using motion capture?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom actually flew fighter jets for his 2022 Top Gun sequel?",cat:'celebrities',a:'Tom Cruise'},
+  {q:"Which Tom famously jumped on Oprah's sofa declaring his love?",cat:'celebrities',a:'Tom Cruise'},
+  {q:"Which Tom holds a black belt in Brazilian jiu-jitsu?",cat:'celebrities',a:'Tom Hardy'},
+  {q:"Which Tom played Marvel villain Loki across six films and two TV series?",cat:'celebrities',a:'Tom Hiddleston'},
+  {q:"Which Tom played a Birmingham gang leader in Peaky Blinders wearing a fat suit?",cat:'celebrities',a:'Tom Hardy'},
+  {q:"Which Tom was screen-tested for James Bond before Daniel Craig was confirmed?",cat:'celebrities',a:'Tom Hiddleston'},
+  {q:"Which Tom played sports agent Jerry Maguire?",cat:'celebrities',a:'Tom Cruise'},
+  {q:"Which Tom appeared opposite both Chris Hemsworth and Chris Evans in the MCU?",cat:'celebrities',a:'Tom Hiddleston'},
+  {q:"Which Tom was arrested at 19 for carjacking at gunpoint?",cat:'celebrities',a:'Tom Hardy'},
+  {q:"Which Tom turned down the lead in Schindler's List the same year he won his first Oscar?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom studied Classics at Cambridge before training at RADA?",cat:'celebrities',a:'Tom Hiddleston'},
+  {q:"Which Tom negotiated profit points on Forrest Gump earning him over £40 million?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom trained with the SAS for eight weeks for a film role?",cat:'celebrities',a:'Tom Hardy'},
+  {q:"Which Tom is a licensed amateur radio operator with callsign KA6YBF?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom was dropped by Paramount after the Oprah sofa incident?",cat:'celebrities',a:'Tom Cruise'},
+  {q:"Which Tom appeared in full Loki costume unannounced at Comic-Con 2013?",cat:'celebrities',a:'Tom Hiddleston'},
+  {q:"Which Tom co-produced Band of Brothers and The Pacific?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom lost out on the role of Patrick Bateman in American Psycho?",cat:'celebrities',a:'Tom Hardy'},
+  {q:"Which Tom plays concert-standard piano and insisted his own hands be shown on screen?",cat:'celebrities',a:'Tom Hiddleston'},
+  {q:"Which Tom runs at 21 mph — scientifically measured while training for Mission Impossible?",cat:'celebrities',a:'Tom Cruise'},
+  {q:"Which Tom sorted packages at a real FedEx depot to prepare for Cast Away?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom deliberately deepened his natural voice to avoid being typecast?",cat:'celebrities',a:'Tom Hardy'},
+  {q:"Which Tom holds a film in the US top 10 chart in every decade from the 80s to 2020s?",cat:'celebrities',a:'Tom Cruise'},
+  {q:"Which Tom played both Kray twins in the same film?",cat:'celebrities',a:'Tom Hardy'},
+  {q:"Which Tom cited theatre director Mike Leigh as his biggest acting influence?",cat:'celebrities',a:'Tom Hiddleston'},
+  {q:"Which Tom was the second actor ever to win Best Actor Oscars in consecutive years?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom reportedly refused a £50 million watch endorsement to protect his privacy?",cat:'celebrities',a:'Tom Cruise'},
+  {q:"Which Tom appeared in the same character across productions owned by Disney, Sony and Universal?",cat:'celebrities',a:'Tom Hanks'},
+  {q:"Which Tom memorised every other cast member's lines and refused earpieces on set?",cat:'celebrities',a:'Tom Hardy'},
+
+  // ── BISCUITS ──
+  {q:"Which biscuit was voted the one Britons would most want on a desert island?",cat:'biscuits',a:'Digestive'},
+  {q:"Which biscuit is named after a European royal dynasty, not a spirit?",cat:'biscuits',a:'Bourbon'},
+  {q:"Which biscuit has an elaborate Victorian embossed pattern of scrollwork and urns?",cat:'biscuits',a:'Custard Cream'},
+  {q:"Which biscuit's packaging features a cartoon character created by Tom McNally?",cat:'biscuits',a:'Jammy Dodger'},
+  {q:"Which biscuit causes more UK A&E visits than any other food — mainly dunking burns?",cat:'biscuits',a:'Digestive'},
+  {q:"Which biscuit was named to mark the 1874 royal visit of a duke to Britain?",cat:'biscuits',a:'Bourbon'},
+  {q:"Leeds University calculated the perfect dunking time for which biscuit as 3.5 seconds at 60°C?",cat:'biscuits',a:'Custard Cream'},
+  {q:"Which biscuit has a filling that's technically vanilla buttercream, not its namesake ingredient?",cat:'biscuits',a:'Custard Cream'},
+  {q:"Which biscuit uses a shortcake base with a raspberry jam centre?",cat:'biscuits',a:'Jammy Dodger'},
+  {q:"Tim Peake reportedly smuggled which biscuit onto the International Space Station?",cat:'biscuits',a:'Digestive'},
+  {q:"McVitie's insist which biscuit must be eaten chocolate-side down to hit the taste buds correctly?",cat:'biscuits',a:'Digestive'},
+  {q:"Which biscuit was first manufactured on a fully automated production line in Harlesden in 1921?",cat:'biscuits',a:'Bourbon'},
+  {q:"Which biscuit has exactly 16 holes arranged in two rows of eight?",cat:'biscuits',a:'Bourbon'},
+  {q:"A 2019 poll named which biscuit the nation's survival choice above shortbread and hobnobs?",cat:'biscuits',a:'Bourbon'},
+  {q:"Which biscuit's Victorian mould design entered the public domain in the 1920s, meaning any brand could copy it?",cat:'biscuits',a:'Custard Cream'},
+  {q:"Which biscuit was rationed in WW2 and traded on a biscuit black market?",cat:'biscuits',a:'Custard Cream'},
+  {q:"Burton's Foods famously refused to reveal which biscuit's recipe even to its own sales team?",cat:'biscuits',a:'Jammy Dodger'},
+  {q:"Which biscuit is QI claimed is technically classified as a cake under UK tax law?",cat:'biscuits',a:'Jammy Dodger'},
+  {q:"Which biscuit sold 3.2 million units in a single Tesco on Christmas Eve 2019?",cat:'biscuits',a:'Digestive'},
+  {q:"A Hertfordshire University survey found which biscuit is most likely to be offered to a guest unprompted?",cat:'biscuits',a:'Custard Cream'},
+  {q:"Which biscuit appeared in a 1970s ad where a man offered one to a gorilla?",cat:'biscuits',a:'Bourbon'},
+  {q:"Which biscuit's recipe was reportedly carried in its inventor's pocket until his death?",cat:'biscuits',a:'Custard Cream'},
+  {q:"During the 2008 recession, which was the only major biscuit brand to increase sales?",cat:'biscuits',a:'Digestive'},
+  {q:"Which biscuit's manufacturer ran a campaign urging people to eat it upside down?",cat:'biscuits',a:'Jammy Dodger'},
+
+  // ── FARMYARD ANIMALS ──
+  {q:"Which farmyard animal has no sweat glands and uses mud as sunscreen?",cat:'farmyard',a:'Pig'},
+  {q:"Which farmyard animal produces around 25 litres of saliva per day?",cat:'farmyard',a:'Cow'},
+  {q:"Which farmyard animal is a direct descendant of the red junglefowl of South-East Asia?",cat:'farmyard',a:'Chicken'},
+  {q:"Which farmyard animal outperformed dogs in Cambridge University lever-pulling experiments?",cat:'farmyard',a:'Pig'},
+  {q:"Which farmyard animal has a 360-degree visual field but poor depth perception?",cat:'farmyard',a:'Sheep'},
+  {q:"Which farmyard animal was domesticated from wild aurochs, which went extinct in 1627?",cat:'farmyard',a:'Cow'},
+  {q:"Which farmyard animal was bred in Bronze Age Britain primarily for wool, not meat?",cat:'farmyard',a:'Sheep'},
+  {q:"Dolly, the first cloned mammal from an adult cell, was which farmyard animal?",cat:'farmyard',a:'Sheep'},
+  {q:"Which farmyard animal's heart valves have been used in human transplant surgery since the 1960s?",cat:'farmyard',a:'Pig'},
+  {q:"Which farmyard animal consistently aligns north-south when grazing, detected via satellite imagery?",cat:'farmyard',a:'Cow'},
+  {q:"Which farmyard animal can locate truffles, explosives and missing persons by smell?",cat:'farmyard',a:'Pig'},
+  {q:"Which farmyard animal has a third eyelid called a nictitating membrane?",cat:'farmyard',a:'Chicken'},
+  {q:"Which farmyard animal produces lanolin, found in over 1,000 commercial products?",cat:'farmyard',a:'Sheep'},
+  {q:"Which farmyard animal's individual footprints are as unique as human fingerprints?",cat:'farmyard',a:'Pig'},
+  {q:"Which farmyard animal can recognise up to 30 others of its kind by sound alone?",cat:'farmyard',a:'Pig'},
+  {q:"Which farmyard animal has scales on its legs — a retained trait from dinosaur ancestry?",cat:'farmyard',a:'Chicken'},
+  {q:"Which farmyard animal can recognise human faces and remember them for years?",cat:'farmyard',a:'Sheep'},
+  {q:"Scientists found 900 previously unknown bacterial species inside a single which farmyard animal?",cat:'farmyard',a:'Cow'},
+  {q:"Which farmyard animal's cornea has been used in experimental human eye transplants?",cat:'farmyard',a:'Pig'},
+  {q:"Which farmyard animal has a social pecking order so strict the same individual eats first for life?",cat:'farmyard',a:'Chicken'},
+
+  // ── NURSERY RHYMES ──
+  {q:"Which nursery rhyme character argues with Alice about the meaning of words in Through the Looking-Glass?",cat:'nursery',a:'Humpty Dumpty'},
+  {q:"This character was originally depicted as a Civil War cannon before illustrators reimagined them as an egg. Who?",cat:'nursery',a:'Humpty Dumpty'},
+  {q:"Which nursery rhyme character's name is thought to derive from 18th-century slang for a short, stout ale?",cat:'nursery',a:'Humpty Dumpty'},
+  {q:"Who is the nursery rhyme shepherd girl with a crook who has lost her flock?",cat:'nursery',a:'Little Bo Peep'},
+  {q:"Which nursery rhyme character appeared in a P.G. Wodehouse story reimagined as a landlady?",cat:'nursery',a:'Little Bo Peep'},
+  {q:"Whose phrase 'leave them alone and they'll come home' entered English law as a non-intervention metaphor?",cat:'nursery',a:'Little Bo Peep'},
+  {q:"Which nursery rhyme character was possibly inspired by Dr Thomas Muffet, a 16th-century spider enthusiast?",cat:'nursery',a:'Little Miss Muffet'},
+  {q:"A tuffet was likely a grassy mound, not a stool — whose rhyme features one?",cat:'nursery',a:'Little Miss Muffet'},
+  {q:"Harvard psychologists found hearing which character's rhyme triggered stress responses in a third of young children?",cat:'nursery',a:'Little Miss Muffet'},
+  {q:"Which nursery rhyme pair were linked to a theory about a medieval tax on water carriers?",cat:'nursery',a:'Jack and Jill'},
+  {q:"In which rhyme does 'broke his crown' refer to a contemporary term for a skull fracture?",cat:'nursery',a:'Jack and Jill'},
+  {q:"Which nursery rhyme was translated into 34 languages by 1900 — ahead of several Shakespeare plays?",cat:'nursery',a:'Jack and Jill'},
+  {q:"'Couldn't put him together again' entered 19th-century surgery as shorthand for fatal wounds — whose rhyme?",cat:'nursery',a:'Humpty Dumpty'},
+  {q:"Which nursery rhyme character appears in the earliest known printed collection of English nursery rhymes from 1768?",cat:'nursery',a:'Little Miss Muffet'},
+  {q:"The arachnid in whose rhyme has been identified by entomologists as likely a daddy-long-legs, not a spider?",cat:'nursery',a:'Little Miss Muffet'},
+  {q:"Composer Carl Orff set which nursery rhyme to music in his 1932 Schulwerk series?",cat:'nursery',a:'Jack and Jill'},
+  {q:"Which character was cited in a 1972 animal welfare court case to argue leaving livestock was culturally normal?",cat:'nursery',a:'Little Bo Peep'},
+  {q:"Which character was adopted as a WW1 mascot by the Royal Ordnance Corps?",cat:'nursery',a:'Humpty Dumpty'},
+  {q:"A Victorian etiquette guide cited whose rhyme as proof that eating outdoors was improper for young ladies?",cat:'nursery',a:'Little Miss Muffet'},
+  {q:"Which rhyme's origins may trace back to the French tale of water-carriers Joli and Gille?",cat:'nursery',a:'Jack and Jill'},
+  {q:"A 2011 V&A exhibition found whose shepherd's crook only appeared in illustrations after 1820?",cat:'nursery',a:'Little Bo Peep'},
+  {q:"Which rhyme has 47 distinct regional British variants — more than any other English nursery rhyme?",cat:'nursery',a:'Humpty Dumpty'},
+  {q:"The earliest printed version of whose rhyme appeared as a riddle in a 1791 music book?",cat:'nursery',a:'Humpty Dumpty'},
+  {q:"Which nursery rhyme character is the first named female protagonist in English children's verse?",cat:'nursery',a:'Little Bo Peep'},
+
+  // ── LONG WEEKEND ──
+  {q:"Which long weekend day is named after the Norse goddess Frigg or Freya?",cat:'weekend',a:'Friday'},
+  {q:"More takeaway food is ordered in the UK on which day than any other?",cat:'weekend',a:'Friday'},
+  {q:"The Jewish Sabbath begins at sundown on which long weekend day?",cat:'weekend',a:'Friday'},
+  {q:"The Islamic Jumu'ah prayer is performed at midday on which long weekend day?",cat:'weekend',a:'Friday'},
+  {q:"Most self-assessment tax returns are filed at the last minute on which day?",cat:'weekend',a:'Friday'},
+  {q:"Which long weekend day is named after the Roman god Saturn?",cat:'weekend',a:'Saturday'},
+  {q:"The 3pm Premier League kick-off tradition dates to the 1880s — which day?",cat:'weekend',a:'Saturday'},
+  {q:"The Grand National has been run on which long weekend day since 1947?",cat:'weekend',a:'Saturday'},
+  {q:"Which long weekend day sees the fewest babies born in England and Wales?",cat:'weekend',a:'Sunday'},
+  {q:"The Sunday Trading Act limits large shops to six hours trading on which day?",cat:'weekend',a:'Sunday'},
+  {q:"Which long weekend day replaced Saturday as the Christian day of worship?",cat:'weekend',a:'Sunday'},
+  {q:"The longest and most detailed Shipping Forecast broadcast airs on which night?",cat:'weekend',a:'Sunday'},
+  {q:"NHS data shows the most sick days are called in on which long weekend day?",cat:'weekend',a:'Monday'},
+  {q:"Which long weekend day is named after the Moon — from Old English Mōnandæg?",cat:'weekend',a:'Monday'},
+  {q:"LinkedIn data shows the most job applications are submitted on which day?",cat:'weekend',a:'Monday'},
+  {q:"Which is the first day of the working week in most European countries?",cat:'weekend',a:'Monday'},
+
+  // ── TENS ──
+  {q:"The Prime Minister's official residence is Number what Downing Street?",cat:'tens',a:'10'},
+  {q:"How many events are in a decathlon?",cat:'tens',a:'10'},
+  {q:"How many frames are in a standard game of ten-pin bowling?",cat:'tens',a:'10'},
+  {q:"How many fingers and thumbs does the human body have in total?",cat:'tens',a:'10'},
+  {q:"How many amendments are in the US Bill of Rights?",cat:'tens',a:'10'},
+  {q:"How many is a score — as in 'threescore years and ten'?",cat:'tens',a:'20'},
+  {q:"How many overs does each team face in a T20 cricket match?",cat:'tens',a:'20'},
+  {q:"What is the new residential speed limit in mph introduced across many UK streets since 2020?",cat:'tens',a:'20'},
+  {q:"What is the minimum age to stand as an MP in the United Kingdom?",cat:'tens',a:'20'},
+  {q:"How many numbered segments does a standard dartboard have?",cat:'tens',a:'20'},
+  {q:"What is the standard speed limit in mph in a UK built-up area?",cat:'tens',a:'30'},
+  {q:"How many teeth does a full adult set include — counting all wisdom teeth?",cat:'tens',a:'30'},
+  {q:"How many days do September, April, June and November each have?",cat:'tens',a:'30'},
+  {q:"How many players are on the pitch in a rugby union match in total?",cat:'tens',a:'30'},
+  {q:"How many years make up a pearl wedding anniversary?",cat:'tens',a:'30'},
+  {q:"Ali Baba and the how-many Thieves?",cat:'tens',a:'40'},
+  {q:"In tennis, what is the score that follows 30?",cat:'tens',a:'40'},
+  {q:"How many days did Jesus spend fasting in the wilderness?",cat:'tens',a:'40'},
+  {q:"How many weeks is a standard human pregnancy?",cat:'tens',a:'40'},
+  {q:"What is the maximum working week in hours under the EU Working Time Directive?",cat:'tens',a:'40'},
+
+  // ── DIRECTIONS ──
+  {q:"Which direction describes progressive politics — named after where those delegates sat in the French assembly?",cat:'directions',a:'Left'},
+  {q:"In stage directions, which word describes the part of the stage furthest from the audience?",cat:'directions',a:'Up'},
+  {q:"Text in Western languages is aligned to which side of the page by default?",cat:'directions',a:'Left'},
+  {q:"Rivers always flow in which direction relative to their source?",cat:'directions',a:'Down'},
+  {q:"Manga pages are read from which side — the opposite to Western books?",cat:'directions',a:'Right'},
+  {q:"A chess pawn can only ever move in which direction?",cat:'directions',a:'Up'},
+  {q:"In heraldry, 'sinister' refers to which side from the viewer's perspective?",cat:'directions',a:'Left'},
+  {q:"Old maps placed inferior territories at which edge — giving us the phrase 'gone south'?",cat:'directions',a:'Down'},
+  {q:"A southpaw boxer's dominant hand sits on which side of the body?",cat:'directions',a:'Right'},
+  {q:"A rising barometer reading indicates atmospheric pressure moving in which direction?",cat:'directions',a:'Up'},
+  {q:"Topspin in snooker causes the cue ball to keep rolling in which direction after contact?",cat:'directions',a:'Up'},
+  {q:"The Home key on a keyboard moves the cursor to which end of the line?",cat:'directions',a:'Left'},
+  {q:"A rising melody line moves in which direction on the musical stave?",cat:'directions',a:'Up'},
+  {q:"On a number line, positive numbers extend in which direction from zero?",cat:'directions',a:'Right'},
+  {q:"To be politically moderate is to be neither far this direction nor far right — which direction?",cat:'directions',a:'Left'},
+  {q:"A right-handed bowler's hook curves toward the pins from which direction?",cat:'directions',a:'Right'},
+];
+
+// ============================================================
+// GRID SHAPE DETECTION
+// ============================================================
+const GS=16,GC=4;
+// 3-cell connected shapes: horizontal line, vertical line, 4 L-rotations
+// A valid set is any 3 same-category tiles forming one of these shapes
+function shapeKey(cells){
+  const cs=cells.map(i=>({r:Math.floor(i/GC),c:i%GC}));
+  const mr=Math.min(...cs.map(c=>c.r)),mc=Math.min(...cs.map(c=>c.c));
+  return cs.map(c=>({r:c.r-mr,c:c.c-mc})).sort((a,b)=>a.r-b.r||a.c-b.c).map(c=>`${c.r},${c.c}`).join('|');
+}
+const SHAPES=(()=>{
+  // Enumerate all 3-cell connected combinations on the grid and collect their normalised keys
+  const k=new Set();
+  function adj(x,y){return Math.abs(Math.floor(x/GC)-Math.floor(y/GC))+Math.abs(x%GC-y%GC)===1;}
+  for(let a=0;a<GS;a++)for(let b=a+1;b<GS;b++)for(let c=b+1;c<GS;c++){
+    const abA=adj(a,b),bcA=adj(b,c),acA=adj(a,c);
+    if((abA||acA)&&(abA||bcA)&&(acA||bcA)) k.add(shapeKey([a,b,c]));
+  }
+  return k;
+})();
+function validShape(cells){return SHAPES.has(shapeKey(cells));}
+function combos3(a){const r=[];for(let i=0;i<a.length-2;i++)for(let j=i+1;j<a.length-1;j++)for(let k=j+1;k<a.length;k++)r.push([a[i],a[j],a[k]]);return r;}
+function roomForSet(grid){const e=[];for(let i=0;i<GS;i++)if(!grid[i]||grid[i]===0)e.push(i);if(e.length<3)return false;for(const c of combos3(e))if(validShape(c))return true;return false;}
+function roomWithSteal(grid){const u=[];for(let i=0;i<GS;i++)if(!grid[i]||grid[i]===0||!grid[i].locked)u.push(i);if(u.length<3)return false;for(const c of combos3(u))if(validShape(c))return true;return false;}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function getTile(id){for(const cat of Object.values(ALL_CATS)){const t=cat.tiles.find(t=>t.id===id);if(t)return t;}return null;}
+function getTileCat(id){for(const[k,cat]of Object.entries(ALL_CATS)){if(cat.tiles.find(t=>t.id===id))return k;}return null;}
+function tileByLabel(cat,label){return ALL_CATS[cat]&&ALL_CATS[cat].tiles.find(t=>t.l===label);}
+function opp(r){return r==='red'?'blue':'red';}
+function dbg(msg){console.log('[BG]',msg);}
+
+// ── LOBBY MUSIC ──
+// Desktop browsers require audio to start inside a direct user gesture (click/tap).
+// We call startLobbyMusic() directly from button onclick handlers — that IS a user
+// gesture — so we just call play() immediately, no unlock listener needed.
+function startLobbyMusic(){
+  const m=document.getElementById('lobby-music');
+  if(!m||m._playing)return;
+  m.volume=0.55;
+  // Don't rewind if already partway through (e.g. navigating between lobby screens)
+  if(m.paused) m.currentTime=0;
+  const p=m.play();
+  if(p!==undefined){
+    p.then(()=>{ m._playing=true; })
+     .catch(e=>{ console.log('[BG] Music blocked:',e.message); });
+  }
+}
+function stopLobbyMusic(){
+  const m=document.getElementById('lobby-music');
+  if(!m||m.paused)return;
+  // Fade out over 1.2 seconds then pause
+  let vol=m.volume;
+  const step=()=>{
+    vol=Math.max(0,vol-0.035);
+    m.volume=vol;
+    if(vol>0.001){setTimeout(step,50);}
+    else{m.pause();m.volume=0.55;m._playing=false;}
+  };
+  step();
+}
+
+// ============================================================
+// FIREBASE
+// ============================================================
+let db=null;
+function initFirebase(){
+  if(FIREBASE_CONFIG.apiKey==='YOUR_API_KEY'){
+    showHomeError('⚠️ Firebase config not set. Add your values to the FIREBASE_CONFIG block.');
+    document.getElementById('home-status').textContent='';
+    return;
+  }
+  if(typeof firebase==='undefined'){
+    // SDK failed to load — retry once after a short delay
+    document.getElementById('home-status').textContent='Loading Firebase...';
+    setTimeout(()=>{
+      if(typeof firebase==='undefined'){
+        showHomeError('⚠️ Firebase SDK failed to load. Check your internet connection or try a hard refresh (Ctrl+Shift+R).');
+      } else {
+        initFirebase();
+      }
+    }, 2000);
+    return;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.database();
+    document.getElementById('home-status').textContent='Ready — create or join a game';
+    dbg('Firebase OK');
+  }catch(e){
+    showHomeError('Firebase error: '+e.message);
+    dbg('Firebase FAILED: '+e.message);
+  }
+}
+function showHomeError(msg){const el=document.getElementById('home-error');el.textContent=msg;el.style.display='block';}
+function rref(code){return db.ref('battlegrid/'+code);}
+
+// ============================================================
+// STATE
+// ============================================================
+let myRole=null;       // 'red' | 'blue'
+let roomCode=null;
+let gameState=null;
+let roomListener=null;
+
+// Local UI state — not synced
+let lPhase='idle';     // idle | question | answered | place | steal | steal-place | trap
+let lQ=null;           // current question object
+let lTile=null;        // selected tile id
+let lStealTile=null;   // tile id we're trying to steal
+let lStealAvail=false; // steal is mandatory this turn
+
+function makeState(code){
+  return {
+    code,
+    redJoined:false, blueJoined:false, started:false,
+    turn:'red',
+    scores:{red:0,blue:0},
+    money:{red:0,blue:0},
+    handRed:[], handBlue:[],
+    grid:Array(GS).fill(null),
+    usedQ:[],
+    activeCats:[],
+    catQueue:[...CAT_KEYS],
+    needsCatPick:'red',
+    forced:false,
+    lastStolen:null,
+    stealFailRed:0,
+    stealFailBlue:0,
+    lastPlaced:null,
+    trapRed:null,
+    trapBlue:null,
+    trapRed2:null,
+    trapBlue2:null,
+    gameOver:false,
+    msg:'Waiting for players...'
+  };
+}
+
+// Firebase stores null for empty arrays/objects — restore them
+function fixState(s){
+  if(!s)return null;
+  if(!s.scores)s.scores={red:0,blue:0};
+  s.scores.red=s.scores.red||0;
+  s.scores.blue=s.scores.blue||0;
+  if(!s.money)s.money={red:0,blue:0};
+  s.money.red=s.money.red||0;
+  s.money.blue=s.money.blue||0;
+  if(!s.handRed||!Array.isArray(s.handRed))s.handRed=s.handRed?Object.values(s.handRed):[];
+  if(!s.handBlue||!Array.isArray(s.handBlue))s.handBlue=s.handBlue?Object.values(s.handBlue):[];
+  if(!s.usedQ||!Array.isArray(s.usedQ))s.usedQ=s.usedQ?Object.values(s.usedQ):[];
+  if(!s.activeCats||!Array.isArray(s.activeCats))s.activeCats=s.activeCats?Object.values(s.activeCats):[];
+  if(s.needsCatPick===undefined||s.needsCatPick===false)s.needsCatPick=null;
+  if(!s.catQueue||!Array.isArray(s.catQueue))s.catQueue=s.catQueue?Object.values(s.catQueue):[];
+  if(!s.grid||!Array.isArray(s.grid)){
+    const g=Array(GS).fill(null);
+    if(s.grid)Object.keys(s.grid).forEach(i=>{g[+i]=s.grid[i]===0?null:s.grid[i];});
+    s.grid=g;
+  } else {
+    for(let i=0;i<GS;i++)if(s.grid[i]===0||s.grid[i]===undefined)s.grid[i]=null;
+  }
+  s.redJoined=!!s.redJoined; s.blueJoined=!!s.blueJoined; s.started=!!s.started;
+  s.forced=!!s.forced; s.gameOver=!!s.gameOver;
+  if(!s.lastPlaced)s.lastPlaced=null;
+  if(s.stealFailRed===undefined)s.stealFailRed=0;
+  if(s.stealFailBlue===undefined)s.stealFailBlue=0;
+  if(s.trapRed===undefined)s.trapRed=null;
+  if(s.trapBlue===undefined)s.trapBlue=null;
+  if(s.trapRed2===undefined)s.trapRed2=null;
+  if(s.trapBlue2===undefined)s.trapBlue2=null;
+  return s;
+}
+
+// Firebase can't store null in arrays — convert nulls to 0
+function prepSave(s){
+  const c=JSON.parse(JSON.stringify(s));
+  c.grid=c.grid.map(v=>v===null?0:v);
+  return c;
+}
+
+async function saveState(s){
+  if(!db||!roomCode)return;
+  try{ await rref(roomCode).set(prepSave(s)); }
+  catch(e){ dbg('SAVE ERROR: '+e.message); }
+}
+
+function startListening(){
+  if(roomListener){roomListener();roomListener=null;}
+  roomListener=rref(roomCode).on('value',snap=>{
+    const raw=snap.val();
+    dbg('FB update: '+(raw?'data room='+raw.code+' started='+raw.started:'null'));
+    if(!raw)return;
+    const s=fixState(raw);
+    gameState=s;
+    onStateUpdate(s);
+  });
+}
+
+function stopListening(){
+  if(roomListener){rref(roomCode).off('value');roomListener=null;}
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showScreen(id){
+  ['s-home','s-create','s-join','s-observe','s-role','game-screen'].forEach(s=>{
+    const el=document.getElementById(s);
+    if(s==='game-screen'){el.style.display=(s===id)?'flex':'none';}
+    else{el.classList.toggle('active',s===id);}
+  });
+  document.getElementById('waiting').classList.remove('show');
+  document.getElementById('end').classList.remove('show');
+}
+
+function goObserve(){
+  if(!db){showHomeError('Firebase not connected');return;}
+  showScreen('s-observe');
+}
+
+async function doObserve(){
+  const code=document.getElementById('observe-input').value.trim();
+  const errEl=document.getElementById('observe-error');
+  errEl.style.display='none';
+  if(!/^\d{4}$/.test(code)){errEl.textContent='Enter a 4-digit number';errEl.style.display='block';return;}
+  let snap;
+  try{snap=await rref(code).get();}catch(e){errEl.textContent='Error: '+e.message;errEl.style.display='block';return;}
+  if(!snap.val()){errEl.textContent='Room '+code+' not found';errEl.style.display='block';return;}
+  roomCode=code;
+  myRole='observer';
+  gameState=fixState(snap.val());
+  // Start listening but never write
+  startListening();
+  stopLobbyMusic();
+  showScreen('game-screen');
+  document.getElementById('observer-banner').classList.add('show');
+  document.getElementById('waiting').classList.remove('show');
+  document.getElementById('game-screen').style.display='flex';
+  renderGame();
+}
+
+function goHome(){
+  stopListening();
+  stopLobbyMusic();
+  myRole=null; roomCode=null; gameState=null;
+  lPhase='idle'; lQ=null; lTile=null; lStealTile=null; lStealAvail=false;
+  const ob=document.getElementById('observer-banner');if(ob)ob.classList.remove('show');
+  const oq=document.getElementById('observer-qbox');if(oq)oq.classList.remove('show');
+  showScreen('s-home');
+}
+
+function goCreate(){
+  if(!db){showHomeError('Firebase not connected');return;}
+  showScreen('s-create');
+  startLobbyMusic();
+}
+
+function goJoin(){
+  if(!db){showHomeError('Firebase not connected');return;}
+  showScreen('s-join');
+  startLobbyMusic();
+}
+
+// ============================================================
+// CREATE ROOM
+// ============================================================
+async function createRoom(){
+  const code=String(Math.floor(1000+Math.random()*9000));
+  roomCode=code;
+  const s=makeState(code);
+  await rref(code).set(prepSave(s));
+  gameState=s;
+  document.getElementById('create-code').textContent=code;
+  document.getElementById('wait-code').textContent=code;
+  startListening();
+  dbg('Room created: '+code);
+}
+
+// pickRole replaced by chooseRole
+
+// ============================================================
+// JOIN ROOM
+// ============================================================
+async function doJoin(){
+  const code=document.getElementById('join-input').value.trim();
+  const errEl=document.getElementById('join-error');
+  errEl.style.display='none';
+  if(!/^\d{4}$/.test(code)){errEl.textContent='Enter a 4-digit number';errEl.style.display='block';return;}
+  let snap;
+  try{snap=await rref(code).get();}catch(e){errEl.textContent='Error: '+e.message;errEl.style.display='block';return;}
+  if(!snap.val()){errEl.textContent='Room '+code+' not found';errEl.style.display='block';return;}
+  roomCode=code;
+  gameState=fixState(snap.val());
+  document.getElementById('role-room-code').textContent='ROOM '+code;
+  document.getElementById('role-red').disabled=!!gameState.redJoined;
+  document.getElementById('role-blue').disabled=!!gameState.blueJoined;
+  document.getElementById('role-status').textContent=
+    gameState.redJoined&&gameState.blueJoined?'Both sides taken!':
+    gameState.redJoined?'P1 taken — pick P2':
+    gameState.blueJoined?'P2 taken — pick P1':'Choose your side';
+  startListening();
+  showScreen('s-role');
+}
+
+// pickRoleJoin replaced by chooseRole
+
+// ============================================================
+// TRANSITION TO GAME
+// ============================================================
+function transitionToGame(){
+  lPhase='idle'; lQ=null; lTile=null; lStealTile=null; lStealAvail=false;
+  showScreen('game-screen');
+  if(!gameState.started){
+    // Waiting for second player — show waiting overlay, music keeps playing
+    document.getElementById('wait-code').textContent=roomCode;
+    document.getElementById('waiting').classList.add('show');
+  } else {
+    // Both players ready — show game, stop music, let Firebase listener drive everything
+    stopLobbyMusic();
+    document.getElementById('waiting').classList.remove('show');
+    document.getElementById('game-screen').style.display='flex';
+    // Use onStateUpdate to ensure cat-picker logic fires correctly
+    onStateUpdate(gameState);
+  }
+}
+
+// ============================================================
+// STATE UPDATE FROM FIREBASE
+// ============================================================
+function onStateUpdate(s){
+  dbg('onStateUpdate myRole='+myRole+' started='+s.started+' turn='+s.turn+' needsCatPick='+s.needsCatPick);
+
+  // No role yet — just update lobby buttons
+  if(!myRole){
+    const rred=document.getElementById('role-red');
+    const rblue=document.getElementById('role-blue');
+    if(rred){rred.disabled=!!s.redJoined; rblue.disabled=!!s.blueJoined;}
+    const cred=document.getElementById('create-red');
+    const cblue=document.getElementById('create-blue');
+    if(cred){cred.disabled=!!s.redJoined; cblue.disabled=!!s.blueJoined;}
+    return;
+  }
+
+  if(s.gameOver){showEndScreen(s);return;}
+
+  if(!s.started){
+    document.getElementById('wait-code').textContent=roomCode;
+    document.getElementById('waiting').classList.add('show');
+    return;
+  }
+
+  // Game is live — ensure screens are correct
+  document.getElementById('waiting').classList.remove('show');
+  document.getElementById('game-screen').style.display='flex';
+  stopLobbyMusic();
+
+  // Observer: just render everything and show the question box, no other logic
+  if(myRole==='observer'){
+    updateObserverQBox(s);
+    renderGame();
+    return;
+  }
+
+  // ── CATEGORY PICKER ──
+  // Show picker overlay whenever this player needs to pick, regardless of whose turn it is
+  if(s.needsCatPick===myRole && (s.catQueue||[]).length){
+    showCatPicker(s);
+    renderGame(); // render game behind the overlay
+    return;
+  } else {
+    const picker=document.getElementById('cat-picker');
+    if(picker) picker.classList.remove('show');
+  }
+
+  // Reset local state when it becomes our turn
+  if(s.turn===myRole){
+    if((lPhase==='idle'||lPhase==='answered'||lPhase==='question') && !lQ){
+      lPhase='idle';
+      document.getElementById('qtext').textContent='Press NEXT Q to start your turn!';
+      document.getElementById('answers').innerHTML='';
+    }
+  }
+
+  // Show opponent question when it's their turn
+  if(s.turn!==myRole){
+    if(s.currentQ){
+      renderOpponentQuestion(s.currentQ);
+    } else {
+      document.getElementById('qtext').textContent="Waiting for opponent's question...";
+      document.getElementById('answers').innerHTML='';
+    }
+  }
+
+  renderGame();
+}
+
+function showCatPicker(s){
+  const title = document.getElementById('cat-picker-title');
+  const sub   = document.getElementById('cat-picker-sub');
+  const btns  = document.getElementById('cat-picker-btns');
+  title.textContent = myRole==='red' ? '🔴 P1 — Choose a Category' : '🔵 P2 — Choose a Category';
+  sub.textContent   = s.activeCats.length===0
+    ? 'Pick the first category to enter the game'
+    : 'Pick the next category to enter the game';
+  btns.innerHTML = '';
+  (s.catQueue||[]).forEach(catKey=>{
+    const cd = ALL_CATS[catKey];
+    const btn = document.createElement('button');
+    btn.className = 'cat-pick-btn';
+    btn.style.background = cd.color;
+    btn.style.borderColor = cd.border;
+    btn.style.color = '#fff';
+    btn.textContent = cd.label;
+    btn.onclick = () => pickCategory(catKey);
+    btns.appendChild(btn);
+  });
+  document.getElementById('cat-picker').classList.add('show');
+}
+
+function pickCategory(catKey){
+  if(!gameState)return;
+  const s={...gameState};
+  s.activeCats=[...(s.activeCats||[]), catKey];
+  s.catQueue=(s.catQueue||[]).filter(c=>c!==catKey);
+
+  if(s.activeCats.length===1){
+    // P1 just picked — P2 now picks (turn stays on red, game hasn't started yet)
+    s.needsCatPick='blue';
+    s.msg=ALL_CATS[catKey].label+' in play! 🔵 P2 — choose your category...';
+  } else if(s.activeCats.length===2 && s.needsCatPick==='blue'){
+    // P2 just picked — game can now begin. Turn is red, no more picking needed.
+    s.needsCatPick=null;
+    s.msg=ALL_CATS[catKey].label+' in play! 🔴 P1 — your turn! Press NEXT Q.';
+  } else {
+    // Post-set pick — clear flag, normal play resumes on whoever's turn it is
+    s.needsCatPick=null;
+    s.msg=ALL_CATS[catKey].label+' released into play!';
+  }
+
+  document.getElementById('cat-picker').classList.remove('show');
+  gameState=s;
+  saveState(s);
+  renderGame();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function updateObserverQBox(s){
+  const box=document.getElementById('observer-qbox');
+  const qtitle=document.getElementById('observer-qtitle');
+  const qtext=document.getElementById('observer-qtext');
+  const qanswer=document.getElementById('observer-answer');
+  if(!s.currentQ||!s.currentQ.q){
+    box.classList.remove('show');
+    return;
+  }
+  box.classList.add('show');
+  qtitle.textContent=(s.turn==='red'?'🔴 P1':'🔵 P2')+' IS ANSWERING';
+  qtext.textContent=s.currentQ.q;
+  // Find the answer from the question pool
+  const matchQ=QUESTIONS.find(q=>q.q===s.currentQ.q);
+  qanswer.textContent=matchQ?'✅ ANSWER: '+matchQ.a:'';
+}
+
+function renderGame(){
+  if(!gameState||!myRole)return;
+  const s=gameState;
+  const myHand=myRole==='red'?s.handRed:s.handBlue;
+  const oppHand=myRole==='red'?s.handBlue:s.handRed;
+  const isMyTurn=s.turn===myRole;
+
+  // Badge
+  if(myRole==='observer'){
+    document.getElementById('role-badge').textContent='';
+    document.getElementById('observer-banner').classList.add('show');
+  } else {
+    document.getElementById('role-badge').textContent=myRole==='red'?'🔴 YOU ARE PLAYER 1':'🔵 YOU ARE PLAYER 2';
+    document.getElementById('role-badge').style.color=myRole==='red'?'var(--red)':'var(--blue)';
+    document.getElementById('observer-banner').classList.remove('show');
+  }
+
+  // Scores
+  document.getElementById('red-score').innerHTML=s.scores.red+' <span style="font-size:0.5rem;opacity:0.5">SETS</span>';
+  document.getElementById('blue-score').innerHTML=s.scores.blue+' <span style="font-size:0.5rem;opacity:0.5">SETS</span>';
+  document.getElementById('red-money').textContent='£'+(s.money.red||0).toLocaleString();
+  document.getElementById('blue-money').textContent='£'+(s.money.blue||0).toLocaleString();
+  document.getElementById('red-tiles').textContent=s.handRed.length+' tile'+(s.handRed.length!==1?'s':'');
+  document.getElementById('blue-tiles').textContent=s.handBlue.length+' tile'+(s.handBlue.length!==1?'s':'');
+  document.getElementById('panel-red').className='player-panel red'+(s.turn==='red'?' myturn':'')+(myRole==='red'?' mine':'');
+  document.getElementById('panel-blue').className='player-panel blue'+(s.turn==='blue'?' myturn':'')+(myRole==='blue'?' mine':'');
+
+  // Turn indicator
+  const ind=document.getElementById('turn-ind');
+  if(lPhase==='steal')ind.textContent='⚡ STEAL — CLICK THE HIDDEN TILE';
+  else if(lPhase==='place'||lPhase==='steal-place')ind.textContent='📍 PLACE — CLICK AN EMPTY CELL';
+  else if(s.forced)ind.textContent=isMyTurn?'⚡ YOUR STEAL PHASE':'⚡ OPPONENT STEALING';
+  else ind.textContent=isMyTurn?'YOUR TURN':"OPPONENT'S TURN";
+  ind.className=isMyTurn?myRole:'neutral';
+
+  // Status
+  document.getElementById('statusbar').textContent=s.msg||'';
+
+  // Cat bar
+  const cb=document.getElementById('cat-bar');cb.innerHTML='';
+  for(const k of s.activeCats){const c=ALL_CATS[k];const p=document.createElement('div');p.className='cat-pill';p.style.background=c.color;p.style.borderColor=c.border;p.innerHTML=`<span>${c.tiles[0].e}</span>${c.label}`;cb.appendChild(p);}
+  if(s.catQueue.length){const h=document.createElement('div');h.className='cat-next';h.textContent='▸ Next: '+ALL_CATS[s.catQueue[0]].label;cb.appendChild(h);}
+
+  // Grid
+  renderGrid(s,isMyTurn);
+
+  // Hands
+  renderHand('red',s.handRed,s);
+  renderHand('blue',s.handBlue,s);
+
+  // Cat progress
+  renderCatProg('red',s);
+  renderCatProg('blue',s);
+
+  // Controls
+  renderControls(s,isMyTurn,myHand);
+}
+
+function renderGrid(s,isMyTurn){
+  const el=document.getElementById('grid');el.innerHTML='';
+  for(let i=0;i<GS;i++){
+    const cell=document.createElement('div');cell.className='cell';
+    const g=s.grid[i];
+    if(g){
+      if(g.locked){
+        const t=getTile(g.tileId);
+        cell.classList.add(g.player,'locked');
+        cell.innerHTML=`<span class="temoji">${t.e}</span><span class="tlabel">${t.l}</span><span class="licon">🔒</span>`;
+      } else if(g.player===myRole || myRole==='observer'){
+        const t=getTile(g.tileId);
+        cell.classList.add(g.player);
+        cell.innerHTML=`<span class="temoji">${t.e}</span><span class="tlabel">${t.l}</span>`;
+      } else {
+        cell.classList.add(g.player,'opponent-hidden');
+        cell.innerHTML='<span style="font-size:1.2rem;opacity:0.25">?</span>';
+      }
+      if(isMyTurn&&lPhase==='steal'&&g.player!==myRole&&!g.locked)cell.classList.add('steal-click');
+    } else {
+      if(isMyTurn&&(lPhase==='place'||lPhase==='steal-place'))cell.classList.add('place-target');
+      if(isMyTurn&&lPhase==='trap')cell.classList.add('place-target');
+      // Show my own trap locations (both slots — invisible to opponent)
+      const myTrap1Key = myRole==='red'?'trapRed':'trapBlue';
+      const myTrap2Key = myRole==='red'?'trapRed2':'trapBlue2';
+      if(s[myTrap1Key]===i||s[myTrap2Key]===i) cell.classList.add('my-trap');
+    }
+    cell.addEventListener('click',(idx=>()=>cellClick(idx))(i));
+    el.appendChild(cell);
+  }
+}
+
+function renderHand(player,hand,s){
+  const el=document.getElementById(player+'-hand');el.innerHTML='';
+  if(player!==myRole && myRole!=='observer'){
+    el.innerHTML=`<span style="color:rgba(200,220,255,0.25);font-size:0.72rem">${hand.length} tile${hand.length!==1?'s':''} (hidden)</span>`;
+    return;
+  }
+  const seen={};for(const id of hand)seen[id]=(seen[id]||0)+1;
+  const ids=Object.keys(seen);
+  if(!ids.length){el.innerHTML='<span style="color:rgba(200,220,255,0.25);font-size:0.72rem">No tiles</span>';return;}
+  for(const id of ids){
+    const t=getTile(id);const cnt=seen[id];
+    const d=document.createElement('div');
+    d.className='htile'+(lTile===id?' sel':'');
+    d.innerHTML=`<span style="font-size:1rem">${t.e}</span><span style="font-weight:600">${t.l}${cnt>1?' ×'+cnt:''}</span>`;
+    d.onclick=()=>{if(s.turn===myRole&&(lPhase==='place'||lPhase==='steal-place')){lTile=id;renderGame();}};
+    el.appendChild(d);
+  }
+}
+
+function renderCatProg(player,s){
+  const el=document.getElementById(player+'-cats');el.innerHTML='';
+  if(player!==myRole && myRole!=='observer'){el.innerHTML='<span style="color:rgba(200,220,255,0.25);font-size:0.68rem">Hidden</span>';return;}
+  const hand=player==='red'?s.handRed:s.handBlue;
+  const counts={};
+  for(const g of s.grid)if(g&&g.player===player&&!g.locked){const c=getTileCat(g.tileId);counts[c]=(counts[c]||0)+1;}
+  for(const id of hand){const c=getTileCat(id);counts[c]=(counts[c]||0)+1;}
+  const cats=Object.keys(counts);
+  if(!cats.length){el.innerHTML='<span style="color:rgba(200,220,255,0.25);font-size:0.68rem">No tiles yet</span>';return;}
+  for(const cat of cats){
+    const cd=ALL_CATS[cat];const n=counts[cat];
+    const row=document.createElement('div');row.className='cprow';
+    row.innerHTML=`<div style="display:flex;justify-content:space-between"><span>${cd.label}</span><span style="opacity:0.5">${n}/4</span></div>`;
+    const bg=document.createElement('div');bg.className='cpbg';
+    const bar=document.createElement('div');bar.className='cpbar';
+    bar.style.background=player==='red'?'var(--red)':'var(--blue)';
+    bar.style.width=Math.min(100,n/4*100)+'%';
+    bg.appendChild(bar);row.appendChild(bg);el.appendChild(row);
+  }
+}
+
+function renderControls(s,isMyTurn,myHand){
+  const bn=document.getElementById('btn-next');
+  const bs=document.getElementById('btn-steal');
+  const bp=document.getElementById('btn-place');
+  const bsk=document.getElementById('btn-skip');
+  const btr=document.getElementById('btn-trap');
+  if(myRole==='observer'){
+    bn.disabled=bs.disabled=bp.disabled=bsk.disabled=btr.disabled=true;
+    bs.style.cssText='';bs.textContent='⚡ STEAL';bp.textContent='📍 PLACE';
+    btr.textContent='💣 TRAP';btr.style.cssText='';bsk.textContent='SKIP';bsk.style.cssText='';
+    return;
+  }
+  if(!isMyTurn){
+    bn.disabled=bs.disabled=bp.disabled=bsk.disabled=btr.disabled=true;
+    bs.style.cssText=''; bs.textContent='⚡ STEAL';
+    bp.textContent='📍 PLACE';
+    btr.textContent='💣 TRAP';btr.style.cssText='';
+    return;
+  }
+  // Trap button unlock rules:
+  //  - Locked entirely until at least 1 set has been won (by either player)
+  //  - First trap available after set 1 is scored
+  //  - Second trap available after set 2 is scored (resets if already used)
+  const totalSets=(s.scores.red||0)+(s.scores.blue||0);
+  const myTrapField  = myRole==='red'?'trapRed':'trapBlue';
+  const myTrap2Field = myRole==='red'?'trapRed2':'trapBlue2';
+  const trap1Used = s[myTrapField]  !== null && s[myTrapField]  !== undefined;
+  const trap2Used = s[myTrap2Field] !== null && s[myTrap2Field] !== undefined;
+  const inTrapMode = lPhase==='trap';
+  // Which trap slot is currently active?
+  let trapAvailable = false;
+  let trapLabel = '💣 TRAP';
+  if(totalSets >= 2){
+    // After 2nd set: second trap available if not yet used
+    trapAvailable = !trap2Used;
+    trapLabel = inTrapMode ? '✕ CANCEL TRAP' : (trap2Used ? '💣 TRAPS USED' : (trap1Used ? '💣 TRAP 2' : '💣 TRAP'));
+  } else if(totalSets >= 1){
+    // After 1st set: first trap available if not yet used
+    trapAvailable = !trap1Used;
+    trapLabel = inTrapMode ? '✕ CANCEL TRAP' : (trap1Used ? '💣 TRAP USED' : '💣 TRAP');
+  } else {
+    // No sets yet — trap locked
+    trapAvailable = false;
+    trapLabel = '🔒 TRAP';
+  }
+  btr.disabled = !trapAvailable || (lPhase!=='idle'&&!inTrapMode);
+  btr.textContent = trapLabel;
+  if(inTrapMode){ btr.style.background='rgba(255,100,0,0.3)'; btr.style.borderColor='rgba(255,140,0,0.8)'; }
+  else { btr.style.cssText=''; }
+  const answered=lPhase==='answered'||lPhase==='place'||lPhase==='steal'||lPhase==='steal-place';
+  const needsPick = !!(gameState && gameState.needsCatPick===myRole && (gameState.catQueue||[]).length);
+  const noCats = !gameState || !gameState.activeCats || gameState.activeCats.length===0;
+  bn.disabled=answered||(lPhase!=='idle'&&lPhase!=='question')||inTrapMode||noCats||needsPick;
+  bsk.disabled=(lPhase!=='idle'&&lPhase!=='question')||inTrapMode||needsPick;
+  // Reset skip button style (may have been highlighted by forced-pass detection)
+  if(bsk.textContent==='⛔ PASS TURN (no moves)' && !bsk.disabled){
+    // Keep it highlighted if we're in forced-pass
+  } else if(lPhase==='idle'){
+    bsk.textContent='SKIP';
+    bsk.style.cssText='';
+  }
+  const myFailField=myRole==='red'?'stealFailRed':'stealFailBlue';
+  const myFails=s[myFailField]||0;
+  const stealLimitReached=myFails>=3;
+  const stealRemain=3-myFails;
+
+  // STEAL button
+  if(lPhase==='steal'){
+    bs.disabled=false;
+    bs.textContent='✕ CANCEL STEAL';
+    bs.style.cssText='';
+  } else if(stealLimitReached){
+    bs.disabled=true;
+    bs.textContent='⛔ STEALS USED';
+    bs.style.cssText='';
+  } else if(lStealAvail&&lPhase==='answered'){
+    // Steal is available and glowing — must steal or it passes
+    bs.disabled=false;
+    bs.textContent='⚡ STEAL ('+stealRemain+' left)';
+    bs.style.background='linear-gradient(135deg,#ff8800,#ffcc00)';
+    bs.style.color='#111';
+    bs.style.boxShadow='0 0 18px rgba(255,204,0,0.7)';
+    bs.style.animation='steal-pulse 0.8s infinite alternate';
+  } else if(lPhase==='answered'&&lQ){
+    // Answered correctly, steal is optional (tile not on opp board)
+    bs.disabled=false;
+    bs.textContent='⚡ STEAL ('+stealRemain+' left)';
+    bs.style.cssText='';
+  } else {
+    bs.disabled=true;
+    bs.textContent='⚡ STEAL ('+stealRemain+' left)';
+    bs.style.cssText='';
+  }
+
+  // PLACE button
+  if(lPhase==='place'||lPhase==='steal-place'){
+    bp.disabled=false;
+    bp.textContent='✕ CANCEL';
+  } else {
+    bp.disabled=!lQ||(lPhase!=='answered')||!myHand.length||lStealAvail;
+    bp.textContent='📍 PLACE';
+  }
+
+  // Trap-bar indicator
+  const trapBarEl = document.getElementById('trap-bar');
+  if(trapBarEl) trapBarEl.classList.toggle('show', inTrapMode);
+}
+
+// ============================================================
+// QUESTIONS
+// ============================================================
+// QUESTION ELIGIBILITY
+// Rules:
+//  1. Not already used
+//  2. Category must be active
+//  3. Tile answer must exist
+//  4. Never re-ask about the tile just placed or stolen (lastPlaced / lastStolen)
+//  5. Can't win a tile already in my hand
+//  6. Can't win a tile I have on the board unless I could steal it back from opponent too
+//  7. Normal mode: question must either let me place a new tile OR steal from opponent
+//     (i.e. the answer tile must be either free to place somewhere, or stealable)
+//  8. Forced steal mode: question must directly enable a steal (opp has that tile unlocked)
+// ============================================================
+
+function boardHasSpaceFor(s, tileId, role){
+  // Would winning this tile give me something useful to place?
+  // Yes if: there's an empty cell on the board
+  const hasEmpty = s.grid.some(g => !g);
+  if(hasEmpty) return true;
+  // Or if I could steal an opponent tile (freeing a space) — but that's handled separately
+  return false;
+}
+
+function stealsExhausted(s, role){
+  const failField = role==='red'?'stealFailRed':'stealFailBlue';
+  return (s[failField]||0) >= 3;
+}
+
+function getEligibleFor(s, role){
+  const myOnBoard = new Set(s.grid.filter(g=>g&&g.player===role&&!g.locked).map(g=>g.tileId));
+  const oppOnBoard = new Set(s.grid.filter(g=>g&&g.player===opp(role)&&!g.locked).map(g=>g.tileId));
+  const myHand    = new Set(role==='red'?s.handRed:s.handBlue);
+  const hasEmpty  = s.grid.some(g=>!g);
+  const noSteals  = stealsExhausted(s, role);
+
+  return QUESTIONS.map((q,i)=>({q,i})).filter(({q,i})=>{
+    if(s.usedQ.includes(i))                    return false; // already asked
+    if(!s.activeCats.includes(q.cat))           return false; // cat not active
+    const t=tileByLabel(q.cat,q.a);
+    if(!t)                                      return false; // tile not found
+    if(s.lastStolen===t.id)                     return false; // just stolen — no immediate re-steal
+    if(s.lastPlaced===t.id)                     return false; // just placed — no immediate re-ask
+    if(myHand.has(t.id))                        return false; // already in my hand
+    if(myOnBoard.has(t.id)&&!oppOnBoard.has(t.id)) return false; // already on board, can't steal back
+
+    const canSteal = oppOnBoard.has(t.id);
+
+    // If this player has no steals left, never offer them a steal-only question
+    if(noSteals && canSteal && myOnBoard.has(t.id)) return false;
+
+    if(s.forced){
+      // Steal-mode only: question must enable a steal (only possible if steals remain)
+      return canSteal && !noSteals;
+    } else {
+      // Normal mode: question must enable placing OR stealing
+      const canPlace = !myOnBoard.has(t.id) && hasEmpty;
+      // If no steals left, only offer questions that can be placed
+      return noSteals ? canPlace : (canPlace || canSteal);
+    }
+  });
+}
+
+function getEligible(s){
+  return getEligibleFor(s, myRole);
+}
+
+function nextQuestion(){
+  if(!gameState||gameState.turn!==myRole)return;
+  if(lPhase!=='idle'&&lPhase!=='question')return;
+  // If a category pick is pending for ME, open picker instead of question
+  if(gameState.needsCatPick===myRole && (gameState.catQueue||[]).length){
+    showCatPicker(gameState);return;
+  }
+  // Safety: if no categories are active yet, don't try to ask questions
+  if(!gameState.activeCats||gameState.activeCats.length===0){
+    document.getElementById('statusbar').textContent='Waiting for categories to be chosen...';
+    return;
+  }
+  const s=gameState;
+  const pool=getEligible(s);
+  if(!pool.length){
+    // No eligible questions for this player right now
+    if(s.forced){
+      // In steal mode, this player has nothing to steal — pass turn
+      const updated={...s,turn:opp(myRole),lastStolen:null,
+        msg:'No steal options for '+myRole.toUpperCase()+' — passing to '+opp(myRole).toUpperCase()+'!'};
+      checkForced(updated);
+      // Check if OTHER player also has no options — then it really is game over
+      const otherPool=getEligibleFor(updated,opp(myRole));
+      if(!otherPool.length){endGame(updated,'No moves left!');saveState(updated);return;}
+      lPhase='idle';lQ=null;lTile=null;lStealAvail=false;
+      gameState=updated;saveState(updated);
+      document.getElementById('qtext').textContent='No steal options — turn passed!';
+      document.getElementById('answers').innerHTML='';
+      renderGame();return;
+    } else {
+      // Check if steals exhausted is the reason — if so, offer forced pass
+      if(stealsExhausted(s,myRole)){
+        // All remaining questions require a steal but this player has none left
+        // Show a clear PASS TURN prompt rather than freezing
+        lPhase='idle';lQ=null;lTile=null;lStealAvail=false;
+        document.getElementById('qtext').textContent=
+          '⛔ All available tiles are held by your opponent and you have no steals left. You must pass your turn.';
+        document.getElementById('answers').innerHTML='';
+        // Highlight the skip button to make the action obvious
+        const bsk=document.getElementById('btn-skip');
+        if(bsk){
+          bsk.textContent='⛔ PASS TURN (no moves)';
+          bsk.style.background='rgba(255,80,80,0.35)';
+          bsk.style.borderColor='rgba(255,100,100,0.9)';
+          bsk.disabled=false;
+        }
+        renderGame();return;
+      }
+      // In normal mode, try resetting lastStolen/lastPlaced blocks and retry once
+      const sRetry={...s,lastStolen:null,lastPlaced:null};
+      const retryPool=getEligibleFor(sRetry,myRole);
+      if(!retryPool.length){endGame(s,'No more questions available!');saveState(s);return;}
+      // Unblock and retry
+      gameState=sRetry;
+      return nextQuestion();
+    }
+  }
+  const pick=pool[Math.floor(Math.random()*pool.length)];
+  const opts=CAT_OPTS[pick.q.cat];
+  const others=opts.filter(o=>o!==pick.q.a).sort(()=>Math.random()-0.5).slice(0,3);
+  const choices=[pick.q.a,...others].sort(()=>Math.random()-0.5);
+  const t=tileByLabel(pick.q.cat,pick.q.a);
+  lQ={q:pick.q.q,choices,answerIdx:choices.indexOf(pick.q.a),tileId:t.id,cat:pick.q.cat};
+  lPhase='question';
+  lStealAvail=false;
+  // Store question text+choices in Firebase so opponent can see it (no answerIdx = no cheating)
+  const sharedQ={q:pick.q.q,choices};
+  // Store pick.i locally so we can add to usedQ only on correct answer
+  lQ.questionIdx=pick.i;
+  const updated={...s,lastStolen:null,msg:'Question '+(s.usedQ.length+1),currentQ:sharedQ};
+  gameState=updated;
+  saveState(updated);
+  showQuestion();
+  renderControls(updated,true,myRole==='red'?updated.handRed:updated.handBlue);
+}
+
+function showQuestion(){
+  document.getElementById('qtext').textContent=lQ.q;
+  const el=document.getElementById('answers');el.innerHTML='';
+  ['A','B','C','D'].forEach((l,i)=>{
+    const b=document.createElement('button');b.className='abtn';
+    b.innerHTML=`<span class="aopt">${l}.</span>${lQ.choices[i]}`;
+    b.addEventListener('click',(()=>()=>selectAnswer(i))());
+    el.appendChild(b);
+  });
+}
+
+function renderOpponentQuestion(q){
+  document.getElementById('qtext').textContent=q.q;
+  const el=document.getElementById('answers');el.innerHTML='';
+  ['A','B','C','D'].forEach((l,i)=>{
+    const b=document.createElement('button');b.className='abtn';b.disabled=true;
+    b.style.opacity='0.6';
+    b.innerHTML=`<span class="aopt">${l}.</span>${q.choices[i]}`;
+    el.appendChild(b);
+  });
+}
+
+// ── SOUNDS (Web Audio API — no files needed) ──
+function playSound(type){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    if(type==='money'){
+      // Bright cash-register chime
+      [523,659,784,1047].forEach((freq,i)=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=freq;
+        g.gain.setValueAtTime(0,ctx.currentTime+i*0.08);
+        g.gain.linearRampToValueAtTime(0.35,ctx.currentTime+i*0.08+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.08+0.3);
+        o.start(ctx.currentTime+i*0.08);
+        o.stop(ctx.currentTime+i*0.08+0.35);
+      });
+    } else if(type==='trap-set'){
+      // Sneaky muted clunk
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.type='sine';o.frequency.setValueAtTime(220,ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(80,ctx.currentTime+0.25);
+      g.gain.setValueAtTime(0.3,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
+      o.start(ctx.currentTime);o.stop(ctx.currentTime+0.35);
+    } else if(type==='trap-triggered'){
+      // Loud explosive boom + descend
+      [1,2,3].forEach(i=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sawtooth';o.frequency.setValueAtTime(400-i*80,ctx.currentTime+i*0.05);
+        o.frequency.exponentialRampToValueAtTime(40,ctx.currentTime+0.5+i*0.05);
+        g.gain.setValueAtTime(0.4,ctx.currentTime+i*0.05);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.6);
+        o.start(ctx.currentTime+i*0.05);o.stop(ctx.currentTime+0.65);
+      });
+    } else if(type==='steal'){
+      // Dramatic descending whoosh + low thud
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.type='sawtooth';
+      o.frequency.setValueAtTime(600,ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(80,ctx.currentTime+0.4);
+      g.gain.setValueAtTime(0.4,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);
+      o.start(ctx.currentTime);o.stop(ctx.currentTime+0.5);
+      // thud
+      const o2=ctx.createOscillator(),g2=ctx.createGain();
+      o2.connect(g2);g2.connect(ctx.destination);
+      o2.type='sine';o2.frequency.setValueAtTime(120,ctx.currentTime+0.25);
+      o2.frequency.exponentialRampToValueAtTime(40,ctx.currentTime+0.55);
+      g2.gain.setValueAtTime(0.5,ctx.currentTime+0.25);
+      g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.6);
+      o2.start(ctx.currentTime+0.25);o2.stop(ctx.currentTime+0.65);
+    } else if(type==='set'){
+      // Triumphant fanfare + vanish whoosh
+      [392,494,587,784,988].forEach((freq,i)=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='square';o.frequency.value=freq;
+        g.gain.setValueAtTime(0,ctx.currentTime+i*0.1);
+        g.gain.linearRampToValueAtTime(0.2,ctx.currentTime+i*0.1+0.03);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.1+0.4);
+        o.start(ctx.currentTime+i*0.1);
+        o.stop(ctx.currentTime+i*0.1+0.45);
+      });
+      // Vanish whoosh at the end
+      const ow=ctx.createOscillator(),gw=ctx.createGain();
+      ow.connect(gw);gw.connect(ctx.destination);
+      ow.type='sine';
+      ow.frequency.setValueAtTime(800,ctx.currentTime+0.9);
+      ow.frequency.exponentialRampToValueAtTime(3000,ctx.currentTime+1.4);
+      gw.gain.setValueAtTime(0.15,ctx.currentTime+0.9);
+      gw.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.45);
+      ow.start(ctx.currentTime+0.9);ow.stop(ctx.currentTime+1.5);
+    }
+    setTimeout(()=>ctx.close(),2000);
+  }catch(e){console.log('Audio error:',e);}
+}
+
+function popMoney(amount,color,anchorId){
+  const anchor=document.getElementById(anchorId);
+  if(!anchor)return;
+  const rect=anchor.getBoundingClientRect();
+  const el=document.createElement('div');
+  el.className='money-pop';
+  el.textContent=(amount>0?'+':'')+'£'+Math.abs(amount).toLocaleString();
+  el.style.color=amount>=0?'#ffdd44':'#ff4466';
+  el.style.left=(rect.left+rect.width/2-30)+'px';
+  el.style.top=(rect.top-10)+'px';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1700);
+}
+
+function flashSteal(){
+  const el=document.createElement('div');
+  el.className='steal-flash-overlay';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),900);
+}
+
+function selectAnswer(idx){
+  if(!lQ||lPhase!=='question'||!gameState||gameState.turn!==myRole)return;
+  const correct=idx===lQ.answerIdx;
+  lPhase='answered';
+  document.querySelectorAll('.abtn').forEach((b,i)=>{
+    if(i===lQ.answerIdx)b.classList.add('correct');
+    else if(i===idx)b.classList.add('wrong');
+    b.disabled=true;
+  });
+  const s=gameState;
+  const myHand=myRole==='red'?[...s.handRed]:[...s.handBlue];
+  if(correct){
+    myHand.push(lQ.tileId);
+    const tile=getTile(lQ.tileId);
+    const oppBoard=s.grid.some(g=>g&&g.tileId===lQ.tileId&&g.player===opp(myRole)&&!g.locked);
+    const hasEmpty=s.grid.some(g=>!g);
+    lStealAvail=oppBoard;
+    const updated={...s};
+    if(myRole==='red')updated.handRed=myHand; else updated.handBlue=myHand;
+    // +£100 for winning a tile
+    updated.money={...s.money,[myRole]:(s.money[myRole]||0)+100};
+    playSound('money');
+    popMoney(100,myRole,myRole==='red'?'red-money':'blue-money');
+    if(oppBoard){
+      updated.msg='✅ CORRECT! '+tile.l+' earned (+£100) — ⚡ STEAL is your only option!';
+    } else if(hasEmpty){
+      lPhase='place'; lTile=lQ.tileId;
+      updated.msg='✅ CORRECT! '+tile.l+' earned (+£100) — place it on the grid';
+    } else {
+      updated.msg='✅ CORRECT! '+tile.l+' earned (+£100)';
+    }
+    // Only mark question as used when answered CORRECTLY — wrong answers return to pool
+    if(lQ.questionIdx!==undefined) updated.usedQ=[...s.usedQ,lQ.questionIdx];
+    gameState=updated;
+    saveState(updated);
+  } else {
+    // Wrong answer — clear local state immediately, switch turn, show answer for 2s
+    // Question is NOT added to usedQ — it returns to the pool for later
+    const wrongAnswer=lQ.choices[lQ.answerIdx];
+    const wrongMsg='❌ '+myRole.toUpperCase()+' got it wrong! Answer: '+wrongAnswer+" — "+opp(myRole).toUpperCase()+"'s turn!";
+    // Reset local phase BEFORE saving so onStateUpdate sees clean state
+    lPhase='idle'; lQ=null; lTile=null; lStealAvail=false;
+    const updated={...s,turn:opp(myRole),msg:wrongMsg,currentQ:null};
+    checkForced(updated);
+    gameState=updated;
+    saveState(updated);
+    // Keep wrong-answer highlights visible briefly, then clear
+    setTimeout(()=>{
+      document.getElementById('qtext').textContent='Press NEXT Q when ready!';
+      document.getElementById('answers').innerHTML='';
+      renderGame();
+    }, 2000);
+  }
+  renderGame();
+}
+
+// ============================================================
+// PLACEMENT
+// ============================================================
+function enterPlaceMode(){
+  if(!gameState||gameState.turn!==myRole)return;
+  if(lPhase==='place'){lPhase='answered';lTile=null;renderGame();return;}
+  if(lPhase!=='answered')return;
+  const myHand=myRole==='red'?gameState.handRed:gameState.handBlue;
+  if(!myHand.length)return;
+  lPhase='place';
+  if(!lTile)lTile=myHand[0];
+  renderGame();
+}
+
+function cellClick(idx){
+  if(!gameState||gameState.turn!==myRole)return;
+  if(lPhase==='place'||lPhase==='steal-place')placeTile(idx);
+  else if(lPhase==='steal')attemptSteal(idx);
+  else if(lPhase==='trap')placeTrap(idx);
+}
+
+function placeTrap(idx){
+  const s=gameState;
+  if(s.grid[idx]){document.getElementById('statusbar').textContent='Cell occupied — choose an empty cell!';return;}
+  const totalSets=(s.scores.red||0)+(s.scores.blue||0);
+  const myTrapField  =myRole==='red'?'trapRed':'trapBlue';
+  const myTrap2Field =myRole==='red'?'trapRed2':'trapBlue2';
+  const trap1Used=s[myTrapField]!==null&&s[myTrapField]!==undefined;
+  // Use slot 2 if slot 1 already used and totalSets >= 2
+  const useSlot2 = trap1Used && totalSets>=2;
+  const fieldToUse = useSlot2 ? myTrap2Field : myTrapField;
+  const updated={...s,[fieldToUse]:idx};
+  lPhase='idle';
+  gameState=updated;
+  saveState(updated);
+  playSound('trap-set');
+  const slotLabel = useSlot2 ? 'Trap 2' : 'Trap';
+  document.getElementById('statusbar').textContent='💣 '+slotLabel+' set! Your opponent has no idea...';
+  document.getElementById('trap-bar').classList.remove('show');
+  renderGame();
+}
+
+function placeTile(idx){
+  const s=gameState;
+  if(s.grid[idx]){document.getElementById('statusbar').textContent='Cell occupied!';return;}
+  if(!lTile){document.getElementById('statusbar').textContent='Select a tile first!';return;}
+  const myHand=myRole==='red'?[...s.handRed]:[...s.handBlue];
+  const hi=myHand.indexOf(lTile);
+  if(hi===-1){document.getElementById('statusbar').textContent="You don't have that tile!";return;}
+  const placedId=lTile;
+  lPhase='idle';lTile=null;lQ=null;lStealAvail=false;
+  myHand.splice(hi,1);
+  const newGrid=[...s.grid];
+  newGrid[idx]={tileId:placedId,player:myRole,locked:false};
+  const tile=getTile(placedId);
+  const updated={...s};
+  if(myRole==='red')updated.handRed=myHand; else updated.handBlue=myHand;
+  updated.grid=newGrid;
+  updated.msg=(tile?tile.l:'Tile')+' placed!';
+  updated.currentQ=null;
+  updated.lastStolen=null;
+  updated.lastPlaced=placedId;  // block immediate re-ask on just-placed tile
+  // Check if opponent has a trap (either slot) at this cell
+  const oppTrap1Field=myRole==='red'?'trapBlue':'trapRed';
+  const oppTrap2Field=myRole==='red'?'trapBlue2':'trapRed2';
+  if(updated[oppTrap1Field]===idx||updated[oppTrap2Field]===idx){
+    const whichField=updated[oppTrap1Field]===idx?oppTrap1Field:oppTrap2Field;
+    triggerTrap(updated,idx,placedId,myRole,whichField);
+    return;
+  }
+  checkSets(updated,myRole);
+  if(!updated.gameOver){
+    updated.turn=opp(myRole);
+    checkForced(updated);
+  }
+  gameState=updated;
+  saveState(updated);
+  document.getElementById('qtext').textContent='Press NEXT Q when ready!';
+  document.getElementById('answers').innerHTML='';
+  document.getElementById('steal-bar').classList.remove('show');
+  if(updated.gameOver){showEndScreen(updated);}else{renderGame();}
+}
+
+function triggerTrap(s, trapIdx, placedTileId, victimRole, triggeredField){
+  const trapOwner=opp(victimRole);
+  const trapCat=getTileCat(placedTileId);
+  const grid=[...s.grid];
+
+  // The just-placed tile and same-cat adjacent unlocked tiles of victim are stolen
+  const ADJACENT=[[-1,0],[1,0],[0,-1],[0,1]];
+  const toSteal=[trapIdx]; // always steal the tile that triggered
+  const r0=Math.floor(trapIdx/GC), c0=trapIdx%GC;
+  for(const [dr,dc] of ADJACENT){
+    const r=r0+dr, c=c0+dc;
+    if(r<0||r>=GC||c<0||c>=GC)continue;
+    const ni=r*GC+c;
+    const cell=grid[ni];
+    if(cell&&cell.player===victimRole&&!cell.locked&&getTileCat(cell.tileId)===trapCat){
+      toSteal.push(ni);
+    }
+  }
+
+  // Move stolen tiles to trap owner's hand, remove from grid
+  let victimHandKey=victimRole==='red'?'handRed':'handBlue';
+  let ownerHandKey=trapOwner==='red'?'handRed':'handBlue';
+  let victimHand=[...s[victimHandKey]];
+  let ownerHand=[...s[ownerHandKey]];
+
+  let stolenCount=0;
+  for(const si of toSteal){
+    const cell=grid[si];
+    if(cell){
+      ownerHand.push(cell.tileId);
+      // Remove from victim hand if it was there (the just-placed tile was just removed from hand)
+      const hi=victimHand.indexOf(cell.tileId);
+      if(hi!==-1)victimHand.splice(hi,1);
+      grid[si]=null;
+      stolenCount++;
+    }
+  }
+
+  // Money: £100 per stolen tile moves from victim to owner
+  const moneyStolen=stolenCount*100;
+  const newMoney={...s.money,
+    [trapOwner]:(s.money[trapOwner]||0)+moneyStolen,
+    [victimRole]:Math.max(0,(s.money[victimRole]||0)-moneyStolen)
+  };
+
+  // Spend the triggered trap slot (set to -1 = used)
+  // triggeredField is already the correct slot (trap1 or trap2)
+  const trapField=triggeredField||(trapOwner==='red'?'trapRed':'trapBlue');
+
+  const updated={...s,
+    grid,
+    [victimHandKey]:victimHand,
+    [ownerHandKey]:ownerHand,
+    money:newMoney,
+    [trapField]:-1,
+    lastStolen:null,
+    lastPlaced:null,
+    turn:opp(victimRole),
+    msg:'💣 TRAP TRIGGERED! '+(trapOwner==='red'?'P1':'P2')+' steals '+stolenCount+' tile'+(stolenCount!==1?'s':'')+' and £'+moneyStolen+'!',
+    currentQ:null
+  };
+  checkForced(updated);
+
+  // Animate the trap trigger on both screens
+  if(victimRole===myRole){
+    // I walked into the trap — flash the cells
+    setTimeout(()=>{
+      const cellEls=document.querySelectorAll('#grid .cell');
+      toSteal.forEach(si=>{if(cellEls[si])cellEls[si].classList.add('trap-triggered');});
+    },50);
+    playSound('trap-triggered');
+    // Show loss popups
+    toSteal.forEach(()=>popMoney(-100,victimRole,victimRole==='red'?'red-money':'blue-money'));
+  } else {
+    // My trap fired — celebrate
+    playSound('trap-triggered');
+    flashSteal();
+    popMoney(moneyStolen,trapOwner,trapOwner==='red'?'red-money':'blue-money');
+    setTimeout(()=>{
+      const cellEls=document.querySelectorAll('#grid .cell');
+      toSteal.forEach(si=>{if(cellEls[si])cellEls[si].classList.add('trap-triggered');});
+    },50);
+  }
+
+  gameState=updated;
+  saveState(updated);
+  setTimeout(()=>renderGame(),500);
+}
+
+// ============================================================
+// STEAL
+// ============================================================
+// ── TRAP SOUND ──
+// (added into playSound — see below — this is the activateTrap handler)
+function activateTrap(){
+  if(!gameState||gameState.turn!==myRole)return;
+  if(lPhase==='trap'){lPhase='idle';renderGame();return;} // cancel
+  if(lPhase!=='idle')return;
+  const totalSets=(gameState.scores.red||0)+(gameState.scores.blue||0);
+  const myTrapField  =myRole==='red'?'trapRed':'trapBlue';
+  const myTrap2Field =myRole==='red'?'trapRed2':'trapBlue2';
+  const trap1Used=gameState[myTrapField]!==null&&gameState[myTrapField]!==undefined;
+  const trap2Used=gameState[myTrap2Field]!==null&&gameState[myTrap2Field]!==undefined;
+  if(totalSets>=2&&!trap2Used){lPhase='trap';renderGame();return;}
+  if(totalSets>=1&&!trap1Used&&totalSets<2){lPhase='trap';renderGame();return;}
+  // Already used or not yet unlocked
+}
+
+function activateSteal(){
+  if(!gameState||gameState.turn!==myRole)return;
+  const myFailField=myRole==='red'?'stealFailRed':'stealFailBlue';
+  if((gameState[myFailField]||0)>=3){
+    document.getElementById('statusbar').textContent='⛔ You have used all 3 steal attempts this game!';
+    return;
+  }
+  if(!gameState||gameState.turn!==myRole)return;
+  if(lPhase==='steal'){
+    lPhase='answered';lStealTile=null;
+    document.getElementById('steal-bar').classList.remove('show');
+    renderGame();return;
+  }
+  if(!lQ||lPhase!=='answered')return;
+  const oppHas=gameState.grid.some(g=>g&&g.tileId===lQ.tileId&&g.player===opp(myRole)&&!g.locked);
+  if(!oppHas){document.getElementById('statusbar').textContent="Opponent doesn't have that tile on the board!";return;}
+  lPhase='steal';lStealTile=lQ.tileId;
+  const t=getTile(lQ.tileId);
+  document.getElementById('steal-bar').classList.add('show');
+  document.getElementById('statusbar').textContent='⚡ Click where you think '+t.l+' is hidden!';
+  renderGame();
+}
+
+function attemptSteal(idx){
+  const s=gameState;const g=s.grid[idx];
+  if(!g){document.getElementById('statusbar').textContent='Empty cell!';failSteal();return;}
+  if(g.locked){document.getElementById('statusbar').textContent="Can't steal a locked tile!";return;}
+  if(g.player===myRole){document.getElementById('statusbar').textContent="That's your own tile!";return;}
+  if(g.tileId!==lStealTile){document.getElementById('statusbar').textContent='❌ Wrong tile! Steal failed!';failSteal();return;}
+  const stolenId=lStealTile;
+  const t=getTile(stolenId);
+  lPhase='steal-place';lTile=stolenId;lStealTile=null;
+  document.getElementById('steal-bar').classList.remove('show');
+  const newGrid=[...s.grid];newGrid[idx]=null;
+  const myHand=myRole==='red'?[...s.handRed,...[stolenId]]:[...s.handBlue,...[stolenId]];
+  const updated={...s};
+  if(myRole==='red')updated.handRed=myHand; else updated.handBlue=myHand;
+  // Steal: take £100 from opponent, add £100 to self
+  const oppRole=opp(myRole);
+  updated.money={...s.money,
+    [myRole]:(s.money[myRole]||0)+100,
+    [oppRole]:Math.max(0,(s.money[oppRole]||0)-100)
+  };
+  updated.grid=newGrid;updated.lastStolen=stolenId;
+  updated.msg='⚡ '+t.l+' STOLEN! (+£100, opponent loses £100). Now place it.';
+  playSound('steal');
+  flashSteal();
+  popMoney(100,myRole,myRole==='red'?'red-money':'blue-money');
+  popMoney(-100,oppRole,oppRole==='red'?'red-money':'blue-money');
+  gameState=updated;saveState(updated);renderGame();
+}
+
+function failSteal(){
+  lPhase='idle';lStealTile=null;lQ=null;lStealAvail=false;
+  document.getElementById('steal-bar').classList.remove('show');
+  const failField=myRole==='red'?'stealFailRed':'stealFailBlue';
+  const newFails=(gameState[failField]||0)+1;
+  const atLimit=newFails>=3;
+  const limitMsg=atLimit?' ⛔ '+myRole.toUpperCase()+' has used all 3 steal attempts!':'';
+  const updated={...gameState,
+    [failField]:newFails,
+    turn:opp(myRole),
+    msg:'Steal failed'+limitMsg+' — '+opp(myRole).toUpperCase()+"'s turn!",
+    currentQ:null,lastPlaced:null};
+  checkForced(updated);gameState=updated;saveState(updated);
+  document.getElementById('qtext').textContent='Press NEXT Q when ready!';
+  document.getElementById('answers').innerHTML='';
+  renderGame();
+}
+
+// ============================================================
+// SKIP
+// ============================================================
+function skipTurn(){
+  if(!gameState||gameState.turn!==myRole)return;
+  lPhase='idle';lQ=null;lTile=null;lStealAvail=false;
+  const updated={...gameState,turn:opp(myRole),msg:'Turn skipped.',currentQ:null,lastPlaced:null,lastStolen:null};
+  checkForced(updated);gameState=updated;saveState(updated);
+  document.getElementById('qtext').textContent='Press NEXT Q when ready!';
+  document.getElementById('answers').innerHTML='';
+  renderGame();
+}
+
+// ============================================================
+// SET DETECTION
+// ============================================================
+function checkSets(s,player){
+  const bycat={};
+  for(let i=0;i<GS;i++){
+    const g=s.grid[i];
+    if(g&&g.player===player&&!g.locked){const c=getTileCat(g.tileId);(bycat[c]=bycat[c]||[]).push(i);}
+  }
+  for(const cat in bycat){
+    if(bycat[cat].length<3)continue;
+    for(const combo of combos3(bycat[cat])){
+      if(validShape(combo)){lockSet(s,combo,player,cat);return;}
+    }
+  }
+}
+
+function lockSet(s,cells,player,cat){
+  const cd=ALL_CATS[cat];
+  const grid=[...s.grid];
+
+  // Mark set cells as locked (briefly — they'll vanish after animation)
+  for(const i of cells)grid[i]={...grid[i],locked:true,cat};
+  // Remove any other same-cat tiles already on the board
+  for(let i=0;i<GS;i++){if(grid[i]&&!grid[i].locked&&getTileCat(grid[i].tileId)===cat)grid[i]=null;}
+
+  const filterCat=arr=>arr.filter(id=>getTileCat(id)!==cat);
+  s.handRed=filterCat(s.handRed);s.handBlue=filterCat(s.handBlue);
+  s.activeCats=s.activeCats.filter(c=>c!==cat);
+  s.scores={...s.scores,[player]:(s.scores[player]||0)+1};
+  s.money={...s.money,[player]:(s.money[player]||0)+500};
+  s.grid=grid;
+  // Reset steal fail counters for both players on every set win
+  s.stealFailRed=0;
+  s.stealFailBlue=0;
+  s.msg=cd.label+' SET COMPLETED! (+£500) '+(player==='red'?'P1':'P2')+' scores! Steal limits reset.';
+
+  if(player===myRole){
+    playSound('set');
+    popMoney(500,player,player==='red'?'red-money':'blue-money');
+
+    // Trigger flash animation on the 4 locked cells, then remove them from grid
+    setTimeout(()=>{
+      const cellEls=document.querySelectorAll('#grid .cell');
+      cells.forEach(idx=>{
+        if(cellEls[idx])cellEls[idx].classList.add('set-vanish');
+      });
+      // After animation completes, wipe the cells from Firebase state
+      setTimeout(()=>{
+        const clearedGrid=gameState?[...gameState.grid]:[...s.grid];
+        cells.forEach(idx=>{clearedGrid[idx]=null;});
+        const updated={...gameState,grid:clearedGrid};
+        gameState=updated;
+        saveState(updated);
+        renderGame();
+      },1450);
+    },50);
+  } else {
+    // Opponent made the set — animate their cells vanishing on our screen
+    setTimeout(()=>{
+      const cellEls=document.querySelectorAll('#grid .cell');
+      cells.forEach(idx=>{
+        if(cellEls[idx])cellEls[idx].classList.add('set-vanish');
+      });
+    },50);
+    // The active player will push the cleared grid to Firebase — we just wait for it
+  }
+
+  if(s.scores[player]>=2){s.gameOver=true;return;}
+  // Next player to move picks the next category (if queue isn't empty)
+  // Turn switches to opp after set — so opp is the one who picks
+  if((s.catQueue||[]).length){
+    s.needsCatPick=opp(player);
+  }
+  checkForced(s);
+}
+
+function checkForced(s){
+  if(s.gameOver)return;
+  if(!roomForSet(s.grid)){
+    if(!roomWithSteal(s.grid)){endGame(s,'No more moves!');return;}
+    if(!s.forced){s.forced=true;s.msg='Board full — STEAL PHASE only!';}
+  } else if(s.forced){s.forced=false;s.msg='Space opened — normal play!';}
+}
+
+function endGame(s,reason){
+  s.gameOver=true;const r=s.scores.red||0,b=s.scores.blue||0;
+  const rm=s.money?s.money.red||0:0,bm=s.money?s.money.blue||0:0;
+  let winner;
+  if(r>=2)winner='🔴 P1 WINS!';
+  else if(b>=2)winner='🔵 P2 WINS!';
+  else if(rm>bm)winner='🔴 P1 WINS on money!';
+  else if(bm>rm)winner='🔵 P2 WINS on money!';
+  else winner="🤝 It's a draw!";
+  s.msg=reason+' '+winner;
+}
+
+// ============================================================
+// END SCREEN
+// ============================================================
+function showEndScreen(s){
+  const r=s.scores.red||0,b=s.scores.blue||0;
+  document.getElementById('end-title').textContent=r>=2?'🔴 P1 WINS!':b>=2?'🔵 P2 WINS!':r===b?"🤝 DRAW!":r>b?'🔴 P1 WINS!':'🔵 P2 WINS!';
+  document.getElementById('end-msg').textContent=s.msg||'';
+  const rm=s.money?s.money.red||0:0, bm=s.money?s.money.blue||0:0;
+  document.getElementById('end-scores').innerHTML=
+    `<div style="margin-bottom:8px"><span style="color:var(--red)">P1: ${r} sets</span> &nbsp;·&nbsp; <span style="color:var(--blue)">P2: ${b} sets</span></div>`+
+    `<div style="font-family:'Bebas Neue';font-size:1.6rem"><span style="color:#ffdd44">P1 £${rm.toLocaleString()}</span> &nbsp;vs&nbsp; <span style="color:#ffdd44">P2 £${bm.toLocaleString()}</span></div>`;
+  document.getElementById('end').classList.add('show');
+}
+
+// ============================================================
+// SINGLE pickRole — works from both create and join screens
+// ============================================================
+async function chooseRole(role){
+  dbg('chooseRole: '+role+' roomCode='+roomCode+' gameState='+!!gameState);
+  if(!roomCode||!gameState){dbg('ERROR: no roomCode or gameState');return;}
+  if(role==='red'&&gameState.redJoined){alert('P1 already taken');return;}
+  if(role==='blue'&&gameState.blueJoined){alert('P2 already taken');return;}
+  myRole=role;
+  gameState[role==='red'?'redJoined':'blueJoined']=true;
+  if(gameState.redJoined&&gameState.blueJoined){
+    gameState.started=true;
+    gameState.msg='Game on! Red goes first.';
+  }
+  dbg('Saving: redJoined='+gameState.redJoined+' blueJoined='+gameState.blueJoined+' started='+gameState.started);
+  await saveState(gameState);
+  transitionToGame();
+}
+
+// ============================================================
+// WIRE UP — all onclick handlers
+// ============================================================
+window.goHome=goHome;
+window.goJoin=goJoin;
+window.goObserve=goObserve;
+window.doObserve=doObserve;
+window.doJoin=doJoin;
+window.nextQuestion=nextQuestion;
+window.activateSteal=activateSteal;
+window.enterPlaceMode=enterPlaceMode;
+window.skipTurn=skipTurn;
+window.activateTrap=activateTrap;
+window.placeTrap=placeTrap;
+window.pickCategory=pickCategory;
+window.showCatPicker=showCatPicker;
+
+// Create Game button
+window.goCreate=async function(){
+  if(!db){showHomeError('Firebase not connected — check your config');return;}
+  showScreen('s-create');
+  await createRoom();
+};
+
+// Role buttons — all four point to the same function
+document.getElementById('create-red').onclick=()=>chooseRole('red');
+document.getElementById('create-blue').onclick=()=>chooseRole('blue');
+document.getElementById('role-red').onclick=()=>chooseRole('red');
+document.getElementById('role-blue').onclick=()=>chooseRole('blue');
+
+// Init
+initFirebase();
+
+</script>
+</body>
+</html>
