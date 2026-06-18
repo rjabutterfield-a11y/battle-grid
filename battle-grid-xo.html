@@ -688,11 +688,9 @@ function stopListening(){
 // ============================================================
 function checkWinner(grid){
   for(const line of WIN_LINES){
-    const [a,b,c]=line;
-    if(grid[a]&&grid[b]&&grid[c]&&
-       grid[a].player===grid[b].player&&
-       grid[a].player===grid[c].player){
-      return {player:grid[a].player,line};
+    const cells=line.map(i=>grid[i]);
+    if(cells.every(c=>c&&c.player===cells[0].player)){
+      return {player:cells[0].player,line};
     }
   }
   return null;
